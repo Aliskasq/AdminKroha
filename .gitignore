@@ -1,0 +1,158 @@
+# .gitignore для Telegram-бота Binance Square
+# Это файл .gitignore, который игнорирует ненужные файлы для GitHub-репозитория
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ОС
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Логи и временные файлы
+*.log
+logs/
+*.tmp
+*.temp
+
+# Конфигурации и секреты
+.env
+.env.*
+!.env.example
+*.env.json
+config.py
+
+# Virtual environments
+venv/
+.env
+.venv/
+pyenv/
+
+# Python пакеты
+pipenv/
+poetry.lock
+
+# Sentry и другие системы отслеживания ошибок
+.sentry
+
+sentry.db
+
+# Анализ кода
+coverage/
+htmlcov/
+.coverage
+.coverage.*
+
+# Testing и результаты тестов
+.pytest_cache/
+.pytest
+.nox/
+.pytest_report.html
+
+# Локальные настройки
+.mypy_cache/
+.dmypy.json
+dmypy.ini
+
+# Notion интеграция
+NOTION_INTEGRATION_KEY
+NOTION_DATABASE_ID
+
+# Discord integration
+DISCORD_BOT_TOKEN
+DISCORD_GUILD_ID
+
+# Twitter integration
+TWITTER_BEARER_TOKEN
+TWITTER_CONSUMER_KEY
+TWITTER_CONSUMER_SECRET
+
+# Reddit integration
+REDDIT_CLIENT_ID
+REDDIT_CLIENT_SECRET
+REDDIT_USER_AGENT
+
+# Telegram integration
+TELEGRAM_BOT_TOKEN
+TELEGRAM_API_URL
+
+# Binance API
+BINANCE_API_KEY
+BINANCE_API_SECRET
+BINANCE_TESTNET_API_KEY
+BINANCE_TESTNET_API_SECRET
+
+# Webhooks
+*.webhook
+
+# Временные файлы
+*tmp*
+*TEMP*
+
+# Архивы и бэкапы
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# Локальные данные
+*.sqlite
+*.db
+
+# Сессии
+*.session
+*.sessionstore
+
+# Служебные файлы
+.DS_Store
+Thumbs.db
+
+# Тестовые данные
+test_data/
+
+# Собранные статичные файлы
+static/
+
+# Софт для виртуальной среды
+.venv/
+
+# Файлы для Windows
+Thumbs.db
+desktop.ini
+
+# Файлы для Mac OS
+.DS_Store
+.AppLE
+
+# Файлы для Linux
+.vscode
+.idea

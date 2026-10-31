@@ -1,0 +1,39 @@
+[Unit]
+Description=Telegram Bot for Binance Square
+After=network.target
+
+[Service]
+Type=simple
+User=node
+WorkingDirectory=/home/node/projects/telegram-binance-bot
+Environment=PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
+Environment=NODE_ENV=production
+Environment=LOG_LEVEL=INFO
+
+# Python virtual environment (if used)
+# Environment=VIRTUAL_ENV=/home/node/projects/telegram-binance-bot/venv
+
+# Main bot command
+ExecStart=/usr/bin/pm2 start ecosystem.config.js --name telegram-binance-bot
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+MaxRestarts=10
+
+# Logging configuration
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=telegram-binance-bot
+
+# Resource limits
+LimitNOFILE=65536
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/node/projects/telegram-binance-bot
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,62 @@
+# Python dependencies for Telegram Binance Bot
+
+# Core libraries
+python-telegram-bot>=20.7
+requests>=2.31.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+# For data handling and validation
+pandas>=2.0.0
+numpy>=1.24.0
+pydantic>=2.0.0
+
+# For scheduling
+APScheduler>=3.10.0
+
+# For HTTP client (alternative to requests)
+httpx>=0.25.0
+
+# For logging and monitoring
+loguru>=0.7.0
+psutil>=5.9.0
+
+# For image handling
+Pillow>=10.0.0
+
+# For testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# For linting and formatting
+black>=23.0.0
+flake8>=6.0.0
+isort>=5.12.0
+
+# For documentation
+mkdocs>=1.5.0
+mkdocs-material>=9.0.0
+
+# For security
+cryptography>=41.0.0
+
+# Redis (for caching and message queue)
+redis>=4.6.0
+
+# Database
+SQLAlchemy>=2.0.0
+
+# For async tasks
+asyncio>=3.4.3
+
+# Configuration
+honcho>=0.3.3
+
+# Monitoring and metrics
+prometheus-client>=0.19.0
+
+# Error tracking
+Sentry[sentry-sdk]>=1.15.0
+
+# Webhook support (optional)
+Flask>=2.3.0
