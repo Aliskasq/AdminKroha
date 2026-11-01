@@ -61,14 +61,15 @@ class BinanceSquareBot:
         """
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
+        chat_type = update.effective_chat.type
 
-        # Security check: only allow private messages
-        if update.effective_chat.type != 'private':
+        # Security check: only allow group chats
+        if chat_type != 'group' and chat_type != 'supergroup':
             await update.message.reply_text(
-                "❌ This bot only works in private messages! "
-                "Please message me directly to use AdminKroha."
+                "❌ This bot only works in group chats! "
+                "Please add me to a group chat to use AdminKroha."
             )
-            logger.warning(f"User {username} (ID: {user_id}) tried to use bot in group chat")
+            logger.warning(f"User {username} (ID: {user_id}) tried to use bot in private chat")
             return
 
         # Check if user is admin (only admin can use the bot)
@@ -83,12 +84,13 @@ class BinanceSquareBot:
         self.user_data[user_id] = {
             'username': username,
             'start_time': datetime.now(),
-            'commands_used': 0
+            'commands_used': 0,
+            'chat_id': update.effective_chat.id
         }
 
         welcome_message = (
             f"👋 Welcome, {username}! I'm AdminKroha - Enhanced Binance Square Telegram Bot! 🚀\n\n"
-            f"🎯 **Bot Access Restricted:** Only administrators can use this bot.\n\n"
+            f"🎯 **Bot Access:** This bot works only in group chats.\n\n"
             f"📝 **Available Commands:**\n"
             f"• /help - Show all commands\n"
             f"• /post <text> - Post text content to Binance Square\n"
@@ -112,12 +114,12 @@ class BinanceSquareBot:
             f"🔧 **Admin Commands:**\n"
             f"• /broadcast <text> - Send broadcast message (admin only)\n"
             f"• /logs - View recent logs (admin only)\n\n"
-            f"⚠️ **Note:** This bot is restricted to administrators only for security reasons.\n\n"
+            f"⚠️ **Note:** This bot is restricted to group chats and administrators only for security reasons.\n\n"
             f"❓ Need help? Type any command to get started!"
         )
 
         await update.message.reply_text(welcome_message)
-        logger.info(f"Admin user {username} (ID: {user_id}) started AdminKroha bot")
+        logger.info(f"Admin user {username} (ID: {user_id}) started AdminKroha bot in group chat {update.effective_chat.id}")
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -129,14 +131,15 @@ class BinanceSquareBot:
         """
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
+        chat_type = update.effective_chat.type
 
-        # Security check: only allow private messages
-        if update.effective_chat.type != 'private':
+        # Security check: only allow group chats
+        if chat_type != 'group' and chat_type != 'supergroup':
             await update.message.reply_text(
-                "❌ This bot only works in private messages! "
-                "Please message me directly to use AdminKroha."
+                "❌ This bot only works in group chats! "
+                "Please add me to a group chat to use AdminKroha."
             )
-            logger.warning(f"User {username} (ID: {user_id}) tried to use /help in group chat")
+            logger.warning(f"User {username} (ID: {user_id}) tried to use /help in private chat")
             return
 
         # Check if user is admin (only admin can use the bot)
@@ -188,12 +191,12 @@ class BinanceSquareBot:
             f"• Use polls to engage with your audience\n"
             f"• Set reminders for regular tasks\n"
             f"• Use timezone-aware scheduling (+1, +2, +3, +0)\n\n"
-            f"🔒 **Security:** This bot is restricted to administrators only for security reasons.\n\n"
+            f"🔒 **Security:** This bot is restricted to group chats and administrators only for security reasons.\n\n"
             f"❓ Need help? Type any command to get started!"
         )
 
         await update.message.reply_text(help_message)
-        logger.info(f"Admin user {username} (ID: {user_id}) requested help")
+        logger.info(f"Admin user {username} (ID: {user_id}) requested help in group chat {update.effective_chat.id}")
 
     async def scheldue_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
