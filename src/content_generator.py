@@ -50,29 +50,22 @@ class ContentGenerator:
         Returns:
             Formatted content string
         """
-        # Start with base content
+        # Start with base content - preserve user content exactly as per Binance API guidelines
         formatted_content = content.strip()
 
-        # Add image indicator if applicable
+        # Add image indicator if applicable (only for image posts)
         if post_type == 'image' and image_url:
             formatted_content += f"\n🖼️ Image: {image_url}"
 
-        # Add hashtags if enabled
-        if add_hashtags:
-            hashtags = self._extract_and_format_hashtags(content)
-            if hashtags:
-                formatted_content += f"\n\n{hashtags}"
-
-        # Add ticker analysis if enabled
+        # Add ticker analysis if explicitly enabled
         if add_ticker_analysis:
             tickers = self._extract_tickers(content)
             if tickers:
                 analysis = self._generate_ticker_analysis(tickers)
                 formatted_content += f"\n\n📊 {analysis}"
 
-        # Add post metadata
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
-        formatted_content += f"\n\n⏰ Posted: {timestamp}"
+        # Do NOT add hashtags automatically - user provides them in content
+        # Do NOT add timestamp - Binance handles post time
 
         return formatted_content
 
