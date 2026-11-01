@@ -55,6 +55,18 @@ class BinanceSquareBot:
         self.user_data: Dict[int, Dict[str, Any]] = {}
         self.scheduled_posts: List[Dict[str, Any]] = []
 
+    def _ensure_user_data(self, user_id: int, username: str, chat_id: int) -> None:
+        """Ensure user_data entry exists for the given user."""
+        if user_id not in self.user_data:
+            self.user_data[user_id] = {
+                'username': username,
+                'start_time': datetime.now(),
+                'commands_used': 0,
+                'chat_id': chat_id
+            }
+        # Update username in case it changed
+        self.user_data[user_id]['username'] = username
+
     async def is_group_admin(self, update: Update) -> bool:
         """
         Check if the user is an administrator or creator of the group.
@@ -516,6 +528,9 @@ class BinanceSquareBot:
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
+        # Ensure user data exists
+        self._ensure_user_data(user_id, username, update.effective_chat.id)
+
         if not context.args:
             await update.message.reply_text(
                 "❌ Укажите контент для публикации!\n"
@@ -539,12 +554,15 @@ class BinanceSquareBot:
                 post_type='text'
             )
 
+            # Extract post ID and link from new API response format
+            post_id = result.get('data', {}).get('id', 'N/A')
+            share_link = result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
+
             success_message = (
                 f"✅ Пост успешно опубликован! 🎉\n\n"
                 f"📝 **Контент:**\n{formatted_content}\n\n"
-                f"🆔 **Post ID:** {result.get('id', 'N/A')}\n"
-                f"📅 **Опубликован:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"🔗 **Ссылка на пост:** https://www.binance.com/square/post/{result.get('id', 'N/A')}"
+                f"🆔 **Post ID:** {post_id}\n"
+                f"🔗 **Ссылка на пост:** {share_link}"
             )
 
             await update.message.reply_text(success_message)
@@ -569,6 +587,9 @@ class BinanceSquareBot:
 
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
+
+        # Ensure user data exists
+        self._ensure_user_data(user_id, username, update.effective_chat.id)
 
         if not context.args:
             await update.message.reply_text(
@@ -640,13 +661,16 @@ class BinanceSquareBot:
             # Clear pending state
             del self.user_data[user_id]['pending_image_post']
 
+            # Extract post ID and link from new API response format
+            post_id = post_result.get('data', {}).get('id', 'N/A')
+            share_link = post_result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
+
             success_message = (
                 f"✅ Пост с изображением опубликован! 🎉\n\n"
                 f"📝 **Текст:** {text_content}\n"
                 f"🖼️ **Изображение:** Опубликовано\n\n"
-                f"🆔 **Post ID:** {post_result.get('id', 'N/A')}\n"
-                f"📅 **Опубликован:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"🔗 **Ссылка на пост:** https://www.binance.com/square/post/{post_result.get('id', 'N/A')}"
+                f"🆔 **Post ID:** {post_id}\n"
+                f"🔗 **Ссылка на пост:** {share_link}"
             )
 
             await update.message.reply_text(success_message)
@@ -675,6 +699,9 @@ class BinanceSquareBot:
 
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
+
+        # Ensure user data exists
+        self._ensure_user_data(user_id, username, update.effective_chat.id)
 
         if not context.args:
             await update.message.reply_text(
@@ -1197,6 +1224,9 @@ class BinanceSquareBot:
 
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
+
+        # Ensure user data exists
+        self._ensure_user_data(user_id, username, update.effective_chat.id)
 
         if len(context.args) < 3:
             await update.message.reply_text(

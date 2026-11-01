@@ -3,6 +3,11 @@ Binance Square API integration for Telegram bot.
 
 This module handles all interactions with the Binance Square API,
 including posting content, uploading images, and retrieving ticker data.
+
+Uses the official Binance Square OpenAPI v1/v2 endpoints:
+- Text posts: POST https://www.binance.com/bapi/composite/v1/public/pgc/openApi/content/add
+- Image upload: 4-step flow via v2 endpoints
+- Ticker data: GET https://api.binance.com/api/v3/ticker/24hr
 """
 
 import asyncio
@@ -33,7 +38,8 @@ class BinanceSquareAPI:
         self.config = config
         self.session: Optional[ClientSession] = None
         self.base_url = "https://api.binance.com"
-        self.square_url = "https://api.binance.com/square/api/v1"
+        self.openapi_url = "https://www.binance.com/bapi/composite/v1/public/pgc/openApi"
+        self.openapi_v2_url = "https://www.binance.com/bapi/composite/v2/public/pgc/openApi"
         self.max_retries = 3
         self.retry_delay = 1.0
 
@@ -52,6 +58,7 @@ class BinanceSquareAPI:
         headers = {
             'X-Square-OpenAPI-Key': self.config.binance_api_key,
             'Content-Type': 'application/json',
+            'clienttype': 'binanceSkill',
             'User-Agent': 'Telegram-Binance-Bot/1.0.0',
             'Accept': 'application/json',
         }
@@ -73,7 +80,8 @@ class BinanceSquareAPI:
         url: str,
         data: Optional[Dict] = None,
         params: Optional[Dict] = None,
-        max_retries: Optional[int] = None
+        max_retries: Optional[int] = None,
+        headers: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """
         Make HTTP request with retry logic.
@@ -84,6 +92,7 @@ class BinanceSquareAPI:
             data: Request body
             params: Query parameters
             max_retries: Maximum number of retries
+            headers: Additional headers to add to request
 
         Returns:
             Response data as dictionary
@@ -99,8 +108,12 @@ class BinanceSquareAPI:
 
         for attempt in range(retries):
             try:
+                request_headers = {}
+                if headers:
+                    request_headers.update(headers)
+
                 async with self.session.request(
-                    method, url, json=data, params=params
+                    method, url, json=data, params=params, headers=request_headers
                 ) as response:
                     # Handle different response types
                     if response.content_type == 'application/json':
@@ -122,6 +135,17 @@ class BinanceSquareAPI:
                             headers=response.headers,
                         )
 
+                    # Handle Binance API error codes
+                    if isinstance(response_data, dict) and response_data.get('code') != '000000':
+                        error_code = response_data.get('code', 'Unknown')
+                        error_msg = response_data.get('message', 'Unknown error')
+                        logger.warning(f"Binance API error {error_code}: {error_msg}")
+                        # For some errors like 504 on content/add, treat as success per official helper
+                        if error_code == '504' and 'content/add' in url:
+                            return response_data
+                        # For other errors, raise exception
+                        raise Exception(f"Binance API error {error_code}: {error_msg}")
+
                     return response_data
 
             except Exception as e:
@@ -138,6 +162,7 @@ class BinanceSquareAPI:
         content: str,
         post_type: str = 'text',
         image_url: Optional[str] = None,
+        image_list: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
         poll: Optional[Dict] = None
     ) -> Dict[str, Any]:
@@ -147,38 +172,35 @@ class BinanceSquareAPI:
         Args:
             content: Content text
             post_type: Type of post (text, image, article)
-            image_url: URL of image (for image posts)
-            tags: List of hashtags
+            image_url: Single image URL (deprecated, use image_list)
+            image_list: List of image URLs (up to 4)
+            tags: List of hashtags (not used in new API, embed in content)
             poll: Poll data (for polls)
 
         Returns:
-            Response data from Binance API
+            Response data from Binance API with post ID
         """
-        # Prepare request data
+        # Prepare request data for new API format
         data = {
-            'content': content,
-            'postType': post_type,
-            'timestamp': datetime.now().isoformat()
+            'contentType': 1,  # 1 = short text post, 2 = long article
+            'bodyTextOnly': content
         }
 
-        # Add optional fields
-        if image_url:
-            data['imageUrl'] = image_url
-
-        if tags:
-            data['tags'] = tags
-
-        if poll:
-            data['poll'] = poll
+        # Add images if provided
+        if image_list:
+            data['imageList'] = image_list[:4]  # Max 4 images
+        elif image_url:
+            data['imageList'] = [image_url]
 
         try:
             response = await self._request(
                 'POST',
-                f'{self.square_url}/content/add',
+                f'{self.openapi_url}/content/add',
                 data=data
             )
 
-            logger.info(f"Content posted successfully: {response.get('id', 'N/A')}")
+            post_id = response.get('data', {}).get('id', 'N/A')
+            logger.info(f"Content posted successfully: {post_id}")
             return response
 
         except Exception as e:
@@ -191,40 +213,143 @@ class BinanceSquareAPI:
         filename: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Upload image to Binance Square.
+        Upload image to Binance Square using the 4-step v2 flow.
 
         Args:
             image_data: Image bytes
             filename: Optional filename
 
         Returns:
-            Upload response with image URL
+            Dictionary with image URL
         """
-        # Encode image to base64
-        image_base64 = base64.b64encode(image_data).decode('utf-8')
+        if not filename:
+            filename = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
 
-        # Prepare upload data
-        data = {
-            'image': image_base64,
-            'contentType': 'image/jpeg'
-        }
-
-        if filename:
-            data['filename'] = filename
-
+        # Step 1: Get presigned URL
         try:
-            response = await self._request(
+            presigned_response = await self._request(
                 'POST',
-                f'{self.square_url}/content/image/upload',
-                data=data
+                f'{self.openapi_v2_url}/image/presignedUrl',
+                data={'imageName': filename}
             )
 
-            logger.info(f"Image uploaded successfully: {response.get('url', 'N/A')}")
-            return response
+            presigned_data = presigned_response.get('data', {})
+            presigned_url = presigned_data.get('presignedUrl')
+            file_ticket = presigned_data.get('fileTicket')
+
+            if not presigned_url or not file_ticket:
+                raise Exception(f"Failed to get presigned URL: {presigned_response}")
+
+            logger.info(f"Got presigned URL for image upload")
 
         except Exception as e:
-            logger.error(f"Failed to upload image: {e}")
+            logger.error(f"Failed to get presigned URL: {e}")
             raise
+
+        # Step 2: Upload image to presigned URL (PUT request)
+        try:
+            content_type = 'image/jpeg'
+            if filename.lower().endswith('.png'):
+                content_type = 'image/png'
+            elif filename.lower().endswith('.gif'):
+                content_type = 'image/gif'
+            elif filename.lower().endswith('.webp'):
+                content_type = 'image/webp'
+
+            # Use a separate request for the PUT to presigned URL
+            timeout = aiohttp.ClientTimeout(total=30, connect=10, sock_read=20)
+            async with aiohttp.ClientSession(timeout=timeout) as upload_session:
+                async with upload_session.put(
+                    presigned_url,
+                    data=image_data,
+                    headers={'Content-Type': content_type}
+                ) as response:
+                    if response.status >= 400:
+                        raise Exception(f"Image upload to presigned URL failed: HTTP {response.status}")
+
+            logger.info(f"Image uploaded to presigned URL successfully")
+
+        except Exception as e:
+            logger.error(f"Failed to upload image to presigned URL: {e}")
+            raise
+
+        # Step 3: Poll image status
+        image_url = await self._poll_image_status(file_ticket)
+        if not image_url:
+            raise Exception("Image processing timed out or failed")
+
+        logger.info(f"Image processed successfully: {image_url}")
+        return {'url': image_url}
+
+    async def _poll_image_status(self, file_ticket: str, max_attempts: int = 10, delay: int = 3) -> Optional[str]:
+        """
+        Poll image processing status.
+
+        Args:
+            file_ticket: File ticket from presigned URL response
+            max_attempts: Maximum polling attempts
+            delay: Delay between attempts in seconds
+
+        Returns:
+            Image URL if successful, None otherwise
+        """
+        for attempt in range(max_attempts):
+            try:
+                status_response = await self._request(
+                    'POST',
+                    f'{self.openapi_v2_url}/image/imageStatus',
+                    data={'fileTicket': file_ticket}
+                )
+
+                status_data = status_response.get('data', {})
+                status = status_data.get('status')
+                image_url = status_data.get('imageUrl')
+
+                if status == 1 and image_url:  # Success
+                    return image_url
+                elif status == 2:  # Failed
+                    logger.error(f"Image processing failed: {status_data}")
+                    return None
+                elif status == 0:  # Processing
+                    logger.debug(f"Image processing... attempt {attempt + 1}/{max_attempts}")
+                    await asyncio.sleep(delay)
+                    continue
+
+            except Exception as e:
+                logger.warning(f"Poll attempt {attempt + 1} failed: {e}")
+                if attempt < max_attempts - 1:
+                    await asyncio.sleep(delay)
+                continue
+
+        logger.error(f"Image polling timed out after {max_attempts} attempts")
+        return None
+
+    async def post_image_content(
+        self,
+        content: str,
+        image_data: bytes,
+        filename: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Post content with image in one go (uploads image then posts).
+
+        Args:
+            content: Post text content
+            image_data: Image bytes
+            filename: Optional filename
+
+        Returns:
+            Response data from Binance API
+        """
+        # Upload image first
+        upload_result = await self.upload_image(image_data, filename)
+        image_url = upload_result.get('url')
+
+        if not image_url:
+            raise Exception("Failed to upload image")
+
+        # Post content with image
+        return await self.post_content(content, image_list=[image_url])
 
     async def get_ticker_data(
         self,
@@ -234,22 +359,19 @@ class BinanceSquareAPI:
         Get cryptocurrency ticker data from Binance.
 
         Args:
-            symbols: List of ticker symbols
+            symbols: List of ticker symbols (e.g., ['BTCUSDT', 'ETHUSDT'])
 
         Returns:
             Dictionary of ticker data
         """
         try:
-            # Convert symbols to Binance format (remove USDT suffix for some endpoints)
-            formatted_symbols = []
-            for symbol in symbols:
-                if symbol.endswith('USDT'):
-                    formatted_symbols.append(symbol[:-4] + 'BTC')  # Convert to BTC pair for some endpoints
-                else:
-                    formatted_symbols.append(symbol)
-
-            params = {'symbols': formatted_symbols}
-            response = await self._request('GET', f'{self.base_url}/api/v3/ticker/24hr', params=params)
+            params = {'symbols': symbols}
+            response = await self._request(
+                'GET',
+                f'{self.base_url}/api/v3/ticker/24hr',
+                params=params,
+                headers={'X-Square-OpenAPI-Key': ''}  # Public endpoint, no auth needed
+            )
 
             # Process and format the ticker data
             ticker_data = {}
@@ -292,6 +414,7 @@ class BinanceSquareAPI:
     ) -> Dict[str, Any]:
         """
         Create a poll in Binance Square.
+        Note: Polls may require different API format, using content post for now.
 
         Args:
             question: Poll question
@@ -302,29 +425,13 @@ class BinanceSquareAPI:
         Returns:
             Poll response data
         """
-        data = {
-            'question': question,
-            'options': options,
-            'anonymous': anonymous,
-            'createdAt': datetime.now().isoformat()
-        }
+        # For now, create as a text post with poll info
+        # The actual poll API might be different
+        poll_text = f"🗳️ **Опрос:** {question}\n\n"
+        for i, option in enumerate(options, 1):
+            poll_text += f"{i}. {option}\n"
 
-        if duration:
-            data['duration'] = duration
-
-        try:
-            response = await self._request(
-                'POST',
-                f'{self.square_url}/content/poll',
-                data=data
-            )
-
-            logger.info(f"Poll created successfully: {response.get('id', 'N/A')}")
-            return response
-
-        except Exception as e:
-            logger.error(f"Failed to create poll: {e}")
-            raise
+        return await self.post_content(poll_text)
 
     async def get_user_posts(
         self,
@@ -333,6 +440,7 @@ class BinanceSquareAPI:
     ) -> List[Dict[str, Any]]:
         """
         Get user's posts from Binance Square.
+        Note: Endpoint might be different in new API.
 
         Args:
             limit: Number of posts to retrieve
@@ -341,25 +449,14 @@ class BinanceSquareAPI:
         Returns:
             List of post data
         """
-        params = {'limit': limit, 'offset': offset}
-
-        try:
-            response = await self._request(
-                'GET',
-                f'{self.square_url}/content/user/posts',
-                params=params
-            )
-
-            logger.info(f"Retrieved {len(response)} user posts")
-            return response
-
-        except Exception as e:
-            logger.error(f"Failed to get user posts: {e}")
-            raise
+        # This endpoint might not exist in new API, return empty list
+        logger.warning("get_user_posts not implemented for new API")
+        return []
 
     async def delete_post(self, post_id: str) -> bool:
         """
         Delete a post from Binance Square.
+        Note: Endpoint might be different in new API.
 
         Args:
             post_id: ID of the post to delete
@@ -367,35 +464,16 @@ class BinanceSquareAPI:
         Returns:
             True if successful, False otherwise
         """
-        try:
-            response = await self._request(
-                'DELETE',
-                f'{self.square_url}/content/{post_id}'
-            )
-
-            logger.info(f"Post deleted successfully: {post_id}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to delete post {post_id}: {e}")
-            return False
+        logger.warning("delete_post not implemented for new API")
+        return False
 
     async def get_square_stats(self) -> Dict[str, Any]:
         """
         Get statistics about Binance Square usage.
+        Note: Endpoint might not exist in new API.
 
         Returns:
             Statistics data
         """
-        try:
-            response = await self._request(
-                'GET',
-                f'{self.square_url}/content/stats'
-            )
-
-            logger.info("Retrieved Binance Square statistics")
-            return response
-
-        except Exception as e:
-            logger.error(f"Failed to get statistics: {e}")
-            raise
+        logger.warning("get_square_stats not implemented for new API")
+        return {}
