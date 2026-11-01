@@ -198,7 +198,6 @@ class ReminderManager:
         }
 
         # Load saved reminders
-        self._load_reminders()
 
     async def add_reminder(
         self,

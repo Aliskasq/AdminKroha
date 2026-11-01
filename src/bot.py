@@ -94,8 +94,8 @@ class BinanceSquareBot:
             f"📝 **Available Commands:**\n"
             f"• /help - Show all commands\n"
             f"• /post <text> - Post text content to Binance Square\n"
-            f"• /post-image <text> - Post content with image\n"
-            f"• /get-tickers <tickers> - Get ticker data\n"
+            f"• /post_image <text> - Post content with image\n"
+            f"• /get_tickers <tickers> - Get ticker data\n"
             f"• /poll <question> <option1> <option2> ... - Create a poll\n"
             f"• /schedule <time> <text> - Schedule a post\n"
             f"• /scheldue <details> - Schedule posts with polls/tickers/images\n"
@@ -156,12 +156,12 @@ class BinanceSquareBot:
             f"Use /post followed by your content to create a text post:\n"
             f"  Example: `/post BTC is bullish today #crypto #trading`\n\n"
             f"🖼️ **IMAGE POSTS:**\n"
-            f"Use /post-image followed by text and an image to create a post with an image:\n"
-            f"  Step 1: `/post-image Market analysis`\n"
+            f"Use /post_image followed by text and an image to create a post with an image:\n"
+            f"  Step 1: `/post_image Market analysis`\n"
             f"  Step 2: Send the image to the bot\n\n"
             f"📊 **TICKER DATA:**\n"
             f"Get real-time cryptocurrency ticker information with $SYMBOL highlighting:\n"
-            f"  Example: `/get-tickers $btc $eth $sol` or `/get-tickers BTCUSDT ETHUSDT SOLUSDT`\n\n"
+            f"  Example: `/get_tickers $btc $eth $sol` or `/get_tickers BTCUSDT ETHUSDT SOLUSDT`\n\n"
             f"🗳️ **POLLS:**\n"
             f"Create interactive polls with multiple options:\n"
             f"  Example: `/poll Will BTC go above $50k? Yes No Maybe`\n\n"
@@ -173,7 +173,7 @@ class BinanceSquareBot:
             f"  Example: `/scheldue 14:30 'Will BTC rise?' Yes No Maybe $btc`\n\n"
             f"🔔 **REMINDERS:**\n"
             f"Add customizable reminders with time and days:\n"
-            f"  Example: `/reminder task 09:00 Check tasks 0,2,4 Daily task"\n"
+            f"  Example: `/reminder task 09:00 Check tasks 0,2,4 Daily task`\n"
             f"  Example: `/reminder market 14:30 BTC price $btc 0,1,2,3,4`\n\n"
             f"🔧 **ADMIN COMMANDS:**\n"
             f"• /status - Check bot status and statistics\n"
@@ -215,7 +215,7 @@ class BinanceSquareBot:
                 "Usage: `/scheldue <time> <details>`\n"
                 "Examples:\n"
                 "  `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc`\n"
-                "  `/scheldue 09:00 \"Daily analysis\" \"BTC: $45k (+2.5%) ETH: $2.3k (+1.2%)\" #crypto"\n\n"
+                "  `/scheldue 09:00 \"Daily analysis\" \"BTC: $45k (+2.5%) ETH: $2.3k (+1.2%)\" #crypto`\n\n"
                 "Details can include:\n"
                 "  • Question for poll: \"Will BTC rise?\"\n"
                 "  • Options: Yes No Maybe\n"
@@ -238,7 +238,7 @@ class BinanceSquareBot:
                     "Please provide details in format: [question] [options] [tickers] [hashtags] [content]\n"
                     "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc #crypto`\n"
                     "Example: `/scheldue 09:00 \"Daily analysis\" \"BTC: $45k\" #crypto`\n"
-                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc $eth\""
+                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc $eth`"
                 )
                 return
 
@@ -493,7 +493,7 @@ class BinanceSquareBot:
 
     async def post_image_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
-        Handle /post-image command.
+        Handle /post_image command.
 
         Args:
             update: Telegram update object
@@ -505,7 +505,7 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Please provide text content for the image post!\n"
-                "Example: `/post-image Market analysis today`"
+                "Example: `/post_image Market analysis today`"
             )
             return
 
@@ -541,7 +541,7 @@ class BinanceSquareBot:
         if user_id not in self.user_data or 'pending_image_post' not in self.user_data[user_id]:
             await update.message.reply_text(
                 "❌ No pending image post found!\n"
-                "Please start with `/post-image <text>` command first."
+                "Please start with `/post_image <text>` command first."
             )
             return
 
@@ -595,7 +595,7 @@ class BinanceSquareBot:
 
     async def get_tickers_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
-        Handle /get-tickers command.
+        Handle /get_tickers command.
 
         Args:
             update: Telegram update object
@@ -607,7 +607,7 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Please provide ticker symbols!\n"
-                "Example: `/get-tickers BTCUSDT ETHUSDT SOLUSDT`"
+                "Example: `/get_tickers BTCUSDT ETHUSDT SOLUSDT`"
             )
             return
 
@@ -616,7 +616,7 @@ class BinanceSquareBot:
         if not tickers:
             await update.message.reply_text(
                 "❌ Please provide valid ticker symbols ending with USDT!\n"
-                "Example: `/get-tickers BTCUSDT ETHUSDT SOLUSDT`"
+                "Example: `/get_tickers BTCUSDT ETHUSDT SOLUSDT`"
             )
             return
 
@@ -1644,18 +1644,18 @@ class BinanceSquareBot:
         application.add_handler(CommandHandler("start", self.start))
         application.add_handler(CommandHandler("help", self.help_command))
         application.add_handler(CommandHandler("post", self.post_command))
-        application.add_handler(CommandHandler("post-image", self.post_image_command))
-        application.add_handler(CommandHandler("get-tickers", self.get_tickers_command))
+        application.add_handler(CommandHandler("post_image", self.post_image_command))
+        application.add_handler(CommandHandler("get_tickers", self.get_tickers_command))
         application.add_handler(CommandHandler("poll", self.poll_command))
         application.add_handler(CommandHandler("schedule", self.schedule_command))
         application.add_handler(CommandHandler("status", self.status_command))
 
         # Add reminder command handlers
-        application.add_handler(CommandHandler("add-reminder", self.add_reminder_command))
-        application.add_handler(CommandHandler("list-reminders", self.list_reminders_command))
-        application.add_handler(CommandHandler("remove-reminder", self.remove_reminder_command))
-        application.add_handler(CommandHandler("update-reminder", self.update_reminder_command))
-        application.add_handler(CommandHandler("trigger-reminder", self.trigger_reminder_command))
+        application.add_handler(CommandHandler("add_reminder", self.add_reminder_command))
+        application.add_handler(CommandHandler("list_reminders", self.list_reminders_command))
+        application.add_handler(CommandHandler("remove_reminder", self.remove_reminder_command))
+        application.add_handler(CommandHandler("update_reminder", self.update_reminder_command))
+        application.add_handler(CommandHandler("trigger_reminder", self.trigger_reminder_command))
 
         # Add callback query handler
         application.add_handler(CallbackQueryHandler(self.callback_query_handler))

@@ -155,4 +155,5 @@ desktop.ini
 
 # Файлы для Linux
 .vscode
-.idea
+.ideavenv_production/
+venv_production/

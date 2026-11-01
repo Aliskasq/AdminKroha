@@ -17,6 +17,11 @@ import json
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 
+# Configure root logger
+root_logger = logging.getLogger()
+logger = logging.getLogger(__name__)
+
+
 # Create console handler with debug level
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.DEBUG)
