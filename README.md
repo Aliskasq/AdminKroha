@@ -291,10 +291,18 @@ class Config:
 
 ## 📊 API интеграции
 
-### Binance Square API
-- **Пост**: `POST https://api.binance.com/square/api/v1/content`
-- **Изображение**: `POST https://api.binance.com/square/api/v1/image`
-- **Тикеры**: `GET https://api.binance.com/api/v3/ticker/24hr`
+### Binance Square OpenAPI
+- **Текстовый пост**: `POST https://www.binance.com/bapi/composite/v1/public/pgc/openApi/content/add`
+  - Headers: `X-Square-OpenAPI-Key`, `clienttype: binanceSkill`
+  - Body: `{"contentType": 1, "bodyTextOnly": "text"}`
+- **Изображение (4 шага)**:
+  1. `POST https://www.binance.com/bapi/composite/v2/public/pgc/openApi/image/presignedUrl`
+  2. `PUT` к presigned URL с бинарными данными изображения
+  3. `POST https://www.binance.com/bapi/composite/v2/public/pgc/openApi/image/imageStatus` (polling)
+  4. `POST content/add` с `imageList`
+- **Тикеры**: `GET https://api.binance.com/api/v3/ticker/24hr` (публичный)
+
+> ⚠️ **Важно**: Не пишите API запросы вручную для обычного постинга. Используйте официальные скрипты Binance Skills Hub. Бот использует правильные эндпоинты согласно официальной документации.
 
 ### Telegram Bot API
 - Long polling через python-telegram-bot
@@ -363,7 +371,15 @@ MIT License. См. `LICENSE`.
 
 ## 🔄 Changelog
 
-### v2.1.0 (Current)
+### v2.1.1 (Current)
+- ✅ Исправлены Binance Square API эндпоинты (www.binance.com/bapi/composite)
+- ✅ Правильный формат запросов: contentType=1, bodyTextOnly
+- ✅ 4-шаговая загрузка изображений (presigned URL → PUT → poll → post)
+- ✅ Сохранение пользовательского контента без изменений (хэштеги/каштэги парсит бэкенд Binance)
+- ✅ Убраны лишние теги, таймстампы и префикс "Tags:" в ответе
+- ✅ Правильные ссылки на посты через shareLink API
+
+### v2.1.0
 - ✅ Бот полностью на русском языке
 - ✅ Команды для всех админов группы (не только хардкодного)
 - ✅ Ссылка на пост после публикации
