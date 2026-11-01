@@ -47,6 +47,10 @@ class BinanceSquareBot:
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
 
+        # Suppress HTTP library logging to reduce noise from getUpdates requests
+        logging.getLogger('httpx').setLevel(logging.WARNING)
+        logging.getLogger('httpcore').setLevel(logging.WARNING)
+
         # Bot state
         self.user_data: Dict[int, Dict[str, Any]] = {}
         self.scheduled_posts: List[Dict[str, Any]] = []

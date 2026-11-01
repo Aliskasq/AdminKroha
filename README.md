@@ -4,7 +4,7 @@
 
 **AdminKroha is an advanced Telegram bot for Binance Square with 24/7 operation via systemd, enhanced virtual environment setup, and a comprehensive reminder system.** It builds upon the original Telegram Binance Bot with powerful new features for production deployment.
 
-![Bot Logo](https://github.com/AdminKroha/AdminKroha/blob/main/docs/logo.png?raw=true)
+![Bot Logo](https://github.com/Aliskasq/AdminKroha/blob/main/docs/logo.png?raw=true)
 
 ## 📋 Overview
 
@@ -521,11 +521,11 @@ See `CONTRIBUTING.md` for development guidelines.
 
 ### Issues
 
-Report issues at: https://github.com/AdminKroha/AdminKroha/issues
+Report issues at: https://github.com/Aliskasq/AdminKroha/issues
 
 ### Discussions
 
-Join the discussion at: https://github.com/AdminKroha/AdminKroha/discussions
+Join the discussion at: https://github.com/Aliskasq/AdminKroha/discussions
 
 ### Contact
 

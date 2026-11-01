@@ -52,6 +52,10 @@ root_logger.addHandler(file_handler)
 logging.getLogger('telegram').setLevel(logging.WARNING)
 logging.getLogger('telegram.ext').setLevel(logging.WARNING)
 
+# Suppress HTTP library logging to reduce noise from getUpdates requests
+logging.getLogger('httpx').setLevel(logging.WARNING)
+logging.getLogger('httpcore').setLevel(logging.WARNING)
+
 # Create bot-specific logger
 bot_logger = logging.getLogger('telegram-binance-bot')
 
