@@ -21,6 +21,12 @@ AdminKroha is a next-generation Telegram bot that allows users to post content t
 
 ## ✨ Key Features
 
+### 🔒 Enhanced Security
+- **Group-Only Access**: Bot works only in group chats and supergroups
+- **Admin-Only Privileges**: Only bot administrators can use the bot
+- **Access Control**: Secure authentication and authorization
+- **Security Hardening**: Multiple security layers for protection
+
 ### 🔔 Advanced Reminder System
 - **Customizable Time & Days**: Set reminders for specific times and days
 - **Multiple Types**: Task, market, analysis, news, and general reminders
@@ -29,7 +35,7 @@ AdminKroha is a next-generation Telegram bot that allows users to post content t
 - **Immediate Trigger**: Manually trigger reminders when needed
 
 ### 🛠️ Enhanced Virtual Environment
-- **Python 3.11+ Support**: Latest Python features and performance
+- ** Panther 3.11+ Support**: Latest Python features and performance
 - **Automated Setup**: One-click virtual environment creation
 - **Dependency Management**: Automatic requirements installation
 - **Production Ready**: Optimized for 24/7 operation
