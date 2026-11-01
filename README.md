@@ -143,11 +143,8 @@ BOT_TOKEN=your_telegram_bot_token_here
 # Telegram Group ID (required - get from @userinfobot after adding bot to your group)
 TELEGRAM_GROUP_ID=your_telegram_group_chat_id
 
-# Binance Square API Key
+# Binance Square API Key (only one key needed for posts)
 BINANCE_API_KEY=your_binance_square_api_key_here
-
-# Binance Square API Secret
-BINANCE_API_SECRET=your_binance_square_api_secret_here
 
 # Optional: Admin user ID (for admin commands)
 ADMIN_USER_ID=your_telegram_user_id
