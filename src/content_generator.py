@@ -23,7 +23,7 @@ class ContentGenerator:
         Args:
             config: Bot configuration
         """
-        self.config = config or Config()
+        self.config = config or Config.load_from_env()
         self.hashtag_pattern = re.compile(r'#\w+')
         self.mention_pattern = re.compile(r'@\w+')
         self.url_pattern = re.compile(r'https?://[^\s]+')

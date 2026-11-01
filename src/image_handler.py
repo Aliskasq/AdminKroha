@@ -27,7 +27,7 @@ class ImageHandler:
         Args:
             config: Bot configuration
         """
-        self.config = config or Config()
+        self.config = config or Config.load_from_env()
         self.supported_formats = ['JPEG', 'PNG', 'GIF', 'WEBP']
         self.max_image_size = (1920, 1080)  # Maximum image dimensions
         self.max_file_size = 10 * 1024 * 1024  # 10MB

@@ -55,6 +55,76 @@ class BinanceSquareBot:
         self.user_data: Dict[int, Dict[str, Any]] = {}
         self.scheduled_posts: List[Dict[str, Any]] = []
 
+    async def is_group_admin(self, update: Update) -> bool:
+        """
+        Check if the user is an administrator or creator of the group.
+
+        Args:
+            update: Telegram update object
+
+        Returns:
+            True if user is admin or creator, False otherwise
+        """
+        try:
+            chat_id = update.effective_chat.id
+            user_id = update.effective_user.id
+            member = await update.get_bot().get_chat_member(chat_id, user_id)
+            return member.status in ['administrator', 'creator']
+        except Exception as e:
+            logger.error(f"Error checking admin status: {e}")
+            return False
+
+    async def is_admin_in_configured_group(self, user_id: int) -> bool:
+        """
+        Check if the user is an administrator in the configured Telegram group.
+
+        Args:
+            user_id: Telegram user ID
+
+        Returns:
+            True if user is admin or creator in the configured group, False otherwise
+        """
+        try:
+            if not self.config.telegram_group_id:
+                return False
+            chat_id = int(self.config.telegram_group_id)
+            member = await self.bot.get_chat_member(chat_id, user_id)
+            return member.status in ['administrator', 'creator']
+        except Exception as e:
+            logger.error(f"Error checking admin status in configured group: {e}")
+            return False
+
+    async def require_group_admin(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        """
+        Check if user is group admin and send error message if not.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+
+        Returns:
+            True if user is admin, False otherwise (and sends error message)
+        """
+        # Security check: only allow group chats
+        chat_type = update.effective_chat.type
+        if chat_type != 'group' and chat_type != 'supergroup':
+            await update.message.reply_text(
+                "❌ This bot only works in group chats! "
+                "Please add me to a group chat to use AdminKroha."
+            )
+            logger.warning(f"User {update.effective_user.username or update.effective_user.first_name} (ID: {update.effective_user.id}) tried to use bot in private chat")
+            return False
+
+        # Check if user is group admin
+        if not await self.is_group_admin(update):
+            await update.message.reply_text(
+                "❌ Only group administrators have permission to use AdminKroha!"
+            )
+            logger.warning(f"User {update.effective_user.username or update.effective_user.first_name} (ID: {update.effective_user.id}) tried to use bot without admin permissions")
+            return False
+
+        return True
+
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle /start command.
@@ -63,26 +133,12 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
-        chat_type = update.effective_chat.type
-
-        # Security check: only allow group chats
-        if chat_type != 'group' and chat_type != 'supergroup':
-            await update.message.reply_text(
-                "❌ This bot only works in group chats! "
-                "Please add me to a group chat to use AdminKroha."
-            )
-            logger.warning(f"User {username} (ID: {user_id}) tried to use bot in private chat")
-            return
-
-        # Check if user is admin (only admin can use the bot)
-        if self.config.admin_user_id and user_id != self.config.admin_user_id:
-            await update.message.reply_text(
-                "❌ Only the bot administrator has permission to use AdminKroha!"
-            )
-            logger.warning(f"User {username} (ID: {user_id}) tried to use bot without admin permissions")
-            return
 
         # Initialize user data
         self.user_data[user_id] = {
@@ -133,26 +189,12 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
-        chat_type = update.effective_chat.type
-
-        # Security check: only allow group chats
-        if chat_type != 'group' and chat_type != 'supergroup':
-            await update.message.reply_text(
-                "❌ This bot only works in group chats! "
-                "Please add me to a group chat to use AdminKroha."
-            )
-            logger.warning(f"User {username} (ID: {user_id}) tried to use /help in private chat")
-            return
-
-        # Check if user is admin (only admin can use the bot)
-        if self.config.admin_user_id and user_id != self.config.admin_user_id:
-            await update.message.reply_text(
-                "❌ Only the bot administrator has permission to use AdminKroha!"
-            )
-            logger.warning(f"User {username} (ID: {user_id}) tried to use /help without admin permissions")
-            return
 
         help_message = (
             f"👋 Hi, {username}! Here's a complete guide to using AdminKroha! 📚\n\n"
@@ -210,6 +252,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -302,10 +348,24 @@ class BinanceSquareBot:
             )
             return
 
-        # Check if user is admin (only admin can use the bot)
-        if self.config.admin_user_id and user_id != self.config.admin_user_id:
+        # Check if user is admin in the configured group
+        try:
+            if not self.config.telegram_group_id:
+                await update.message.reply_text(
+                    "❌ Bot not configured with a group ID."
+                )
+                return
+            chat_id = int(self.config.telegram_group_id)
+            member = await update.get_bot().get_chat_member(chat_id, user_id)
+            if member.status not in ['administrator', 'creator']:
+                await update.message.reply_text(
+                    "❌ Only administrators of the configured group can use this feature!"
+                )
+                return
+        except Exception as e:
+            logger.error(f"Error checking admin status: {e}")
             await update.message.reply_text(
-                "❌ Only the bot administrator has permission to use AdminKroha!"
+                "❌ Error verifying admin status. Please try again."
             )
             return
 
@@ -453,6 +513,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -503,6 +567,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -605,6 +673,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -958,10 +1030,24 @@ class BinanceSquareBot:
             )
             return
 
-        # Check if user is admin (only admin can use the bot)
-        if self.config.admin_user_id and user_id != self.config.admin_user_id:
+        # Check if user is admin in the configured group
+        try:
+            if not self.config.telegram_group_id:
+                await update.message.reply_text(
+                    "❌ Bot not configured with a group ID."
+                )
+                return
+            chat_id = int(self.config.telegram_group_id)
+            member = await update.get_bot().get_chat_member(chat_id, user_id)
+            if member.status not in ['administrator', 'creator']:
+                await update.message.reply_text(
+                    "❌ Only administrators of the configured group can use this feature!"
+                )
+                return
+        except Exception as e:
+            logger.error(f"Error checking admin status: {e}")
             await update.message.reply_text(
-                "❌ Only the bot administrator has permission to use AdminKroha!"
+                "❌ Error verifying admin status. Please try again."
             )
             return
 
@@ -1109,6 +1195,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -1188,6 +1278,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -1230,6 +1324,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -1292,6 +1390,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -1375,6 +1477,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -1452,6 +1558,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -1500,6 +1610,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
@@ -1573,6 +1687,10 @@ class BinanceSquareBot:
             update: Telegram update object
             context: Bot context
         """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 

@@ -49,7 +49,6 @@ logs/
 .env.*
 !.env.example
 *.env.json
-config.py
 
 # Virtual environments
 venv/
