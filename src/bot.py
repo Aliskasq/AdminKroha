@@ -62,6 +62,23 @@ class BinanceSquareBot:
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
+        # Security check: only allow private messages
+        if update.effective_chat.type != 'private':
+            await update.message.reply_text(
+                "❌ This bot only works in private messages! "
+                "Please message me directly to use AdminKroha."
+            )
+            logger.warning(f"User {username} (ID: {user_id}) tried to use bot in group chat")
+            return
+
+        # Check if user is admin (only admin can use the bot)
+        if self.config.admin_user_id and user_id != self.config.admin_user_id:
+            await update.message.reply_text(
+                "❌ Only the bot administrator has permission to use AdminKroha!"
+            )
+            logger.warning(f"User {username} (ID: {user_id}) tried to use bot without admin permissions")
+            return
+
         # Initialize user data
         self.user_data[user_id] = {
             'username': username,
@@ -70,8 +87,8 @@ class BinanceSquareBot:
         }
 
         welcome_message = (
-            f"👋 Welcome, {username}! I'm the Binance Square Telegram Bot! 🎉\n\n"
-            f"I can help you post content to Binance Square with various features:\n\n"
+            f"👋 Welcome, {username}! I'm AdminKroha - Enhanced Binance Square Telegram Bot! 🚀\n\n"
+            f"🎯 **Bot Access Restricted:** Only administrators can use this bot.\n\n"
             f"📝 **Available Commands:**\n"
             f"• /help - Show all commands\n"
             f"• /post <text> - Post text content to Binance Square\n"
@@ -79,22 +96,28 @@ class BinanceSquareBot:
             f"• /get-tickers <tickers> - Get ticker data\n"
             f"• /poll <question> <option1> <option2> ... - Create a poll\n"
             f"• /schedule <time> <text> - Schedule a post\n"
+            f"• /scheldue <details> - Schedule posts with polls/tickers/images\n"
+            f"• /reminder <type> <time> [days] [message] - Add reminder\n"
+            f"• /list-reminders - List all reminders\n"
             f"• /status - Check bot status\n\n"
-            f"🔧 **Admin Commands:**\n"
-            f"• /broadcast <text> - Send broadcast message (admin only)\n"
-            f"• /logs - View recent logs (admin only)\n\n"
             f"📊 **Features:**\n"
             f"• Hashtag support in posts\n"
-            f"• Real-time ticker data\n"
+            f"• Real-time ticker data with $SYMBOL highlighting\n"
             f"• Image upload and processing\n"
             f"• Interactive polls\n"
             f"• Content scheduling\n"
+            f"• Advanced reminder system\n"
+            f"• Time zone support (+1, +2, +3, +0)\n"
             f"• Multi-language support\n\n"
-            f"Type /help to see all commands!"
+            f"🔧 **Admin Commands:**\n"
+            f"• /broadcast <text> - Send broadcast message (admin only)\n"
+            f"• /logs - View recent logs (admin only)\n\n"
+            f"⚠️ **Note:** This bot is restricted to administrators only for security reasons.\n\n"
+            f"❓ Need help? Type any command to get started!"
         )
 
         await update.message.reply_text(welcome_message)
-        logger.info(f"User {username} (ID: {user_id}) started the bot")
+        logger.info(f"Admin user {username} (ID: {user_id}) started AdminKroha bot")
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -107,8 +130,25 @@ class BinanceSquareBot:
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
+        # Security check: only allow private messages
+        if update.effective_chat.type != 'private':
+            await update.message.reply_text(
+                "❌ This bot only works in private messages! "
+                "Please message me directly to use AdminKroha."
+            )
+            logger.warning(f"User {username} (ID: {user_id}) tried to use /help in group chat")
+            return
+
+        # Check if user is admin (only admin can use the bot)
+        if self.config.admin_user_id and user_id != self.config.admin_user_id:
+            await update.message.reply_text(
+                "❌ Only the bot administrator has permission to use AdminKroha!"
+            )
+            logger.warning(f"User {username} (ID: {user_id}) tried to use /help without admin permissions")
+            return
+
         help_message = (
-            f"👋 Hi, {username}! Here's a complete guide to using the Binance Square Bot! 📚\n\n"
+            f"👋 Hi, {username}! Here's a complete guide to using AdminKroha! 📚\n\n"
             f"📝 **TEXT POSTS:**\n"
             f"Use /post followed by your content to create a text post:\n"
             f"  Example: `/post BTC is bullish today #crypto #trading`\n\n"
@@ -117,14 +157,21 @@ class BinanceSquareBot:
             f"  Step 1: `/post-image Market analysis`\n"
             f"  Step 2: Send the image to the bot\n\n"
             f"📊 **TICKER DATA:**\n"
-            f"Get real-time cryptocurrency ticker information:\n"
-            f"  Example: `/get-tickers BTCUSDT ETHUSDT SOLUSDT`\n\n"
+            f"Get real-time cryptocurrency ticker information with $SYMBOL highlighting:\n"
+            f"  Example: `/get-tickers $btc $eth $sol` or `/get-tickers BTCUSDT ETHUSDT SOLUSDT`\n\n"
             f"🗳️ **POLLS:**\n"
             f"Create interactive polls with multiple options:\n"
             f"  Example: `/poll Will BTC go above $50k? Yes No Maybe`\n\n"
             f"⏰ **SCHEDULING:**\n"
             f"Schedule posts for future times:\n"
             f"  Example: `/schedule 14:30 Market analysis tomorrow`\n\n"
+            f"🚀 **ADVANCED SCHEDULING (SCHELDU):**\n"
+            f"Schedule posts with polls, tickers, and images:\n"
+            f"  Example: `/scheldue 14:30 'Will BTC rise?' Yes No Maybe $btc`\n\n"
+            f"🔔 **REMINDERS:**\n"
+            f"Add customizable reminders with time and days:\n"
+            f"  Example: `/reminder task 09:00 Check tasks 0,2,4 Daily task"\n"
+            f"  Example: `/reminder market 14:30 BTC price $btc 0,1,2,3,4`\n\n"
             f"🔧 **ADMIN COMMANDS:**\n"
             f"• /status - Check bot status and statistics\n"
             f"• /broadcast <text> - Send broadcast message to all users\n"
@@ -136,14 +183,260 @@ class BinanceSquareBot:
             f"• Scheduled posts: {len(self.scheduled_posts)}\n\n"
             f"🎯 **Tips:**\n"
             f"• Use hashtags (#crypto, #btc, #trading) to increase visibility\n"
-            f"• Include multiple tickers for comprehensive analysis\n"
+            f"• Include $SYMBOL for automatic ticker highlighting\n"
             f"• Schedule posts during peak hours for maximum engagement\n"
-            f"• Use polls to engage with your audience\n\n"
+            f"• Use polls to engage with your audience\n"
+            f"• Set reminders for regular tasks\n"
+            f"• Use timezone-aware scheduling (+1, +2, +3, +0)\n\n"
+            f"🔒 **Security:** This bot is restricted to administrators only for security reasons.\n\n"
             f"❓ Need help? Type any command to get started!"
         )
 
         await update.message.reply_text(help_message)
-        logger.info(f"User {username} requested help")
+        logger.info(f"Admin user {username} (ID: {user_id}) requested help")
+
+    async def scheldue_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /scheldue command.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        if not context.args:
+            await update.message.reply_text(
+                "❌ Please provide scheldue details!\n"
+                "Usage: `/scheldue <time> <details>`\n"
+                "Examples:\n"
+                "  `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc`\n"
+                "  `/scheldue 09:00 \"Daily analysis\" \"BTC: $45k (+2.5%) ETH: $2.3k (+1.2%)\" #crypto"\n\n"
+                "Details can include:\n"
+                "  • Question for poll: \"Will BTC rise?\"\n"
+                "  • Options: Yes No Maybe\n"
+                "  • Tickers: $btc $eth $sol (with or without $)\n"
+                "  • Hashtags: #crypto #bitcoin\n"
+                "  • Content for regular post after options"
+            )
+            return
+
+        time_str = context.args[0]
+        details = ' '.join(context.args[1:])
+
+        try:
+            # Parse scheldue details
+            scheldue_data = self._parse_scheldue_details(details)
+
+            if not scheldue_data:
+                await update.message.reply_text(
+                    "❌ Invalid scheldue format!\n"
+                    "Please provide details in format: [question] [options] [tickers] [hashtags] [content]\n"
+                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc #crypto`\n"
+                    "Example: `/scheldue 09:00 \"Daily analysis\" \"BTC: $45k\" #crypto`\n"
+                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc $eth\""
+                )
+                return
+
+            # Schedule the scheldue post
+            scheduled_time = self._parse_time(time_str)
+            if not scheduled_time:
+                await update.message.reply_text(
+                    "❌ Invalid time format! Use HH:MM format (24 hours)\n"
+                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc`"
+                )
+                return
+
+            # Create scheldue post with all features
+            post_id = await self._create_scheldue_post(
+                scheduled_time,
+                scheldue_data,
+                user_id,
+                username
+            )
+
+            success_message = (
+                f"🚀 **Scheldue Post Scheduled Successfully!** 🎉\n\n"
+                f"📝 **Question:** {scheldue_data.get('question', 'N/A')}\n"
+                f"🗳️ **Options:** {', '.join(scheldue_data.get('options', []))}\n"
+                f"📊 **Tickers:** {', '.join(scheldue_data.get('tickers', []))}\n"
+                f"🏷️ **Hashtags:** {', '.join(scheldue_data.get('hashtags', []))}\n"
+                f"⏰ **Scheduled Time:** {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"🆔 **Scheldue ID:** {post_id}\n"
+                f"👤 **Scheduled by:** {username}\n\n"
+                f"This scheldue will be posted automatically with poll, tickers, and hashtags!"
+            )
+
+            await update.message.reply_text(success_message)
+            logger.info(f"User {username} scheduled scheldue: {details[:50]}...")
+
+        except Exception as e:
+            error_message = f"❌ Error scheduling scheldue: {str(e)}\n"
+            await update.message.reply_text(error_message)
+            logger.error(f"Error scheduling scheldue for user {username}: {e}")
+
+    async def scheldue_command_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle scheldue command with interactive interface.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        # Security check: only allow private messages
+        if update.effective_chat.type != 'private':
+            await update.message.reply_text(
+                "❌ This bot only works in private messages! "
+                "Please message me directly to use AdminKroha."
+            )
+            return
+
+        # Check if user is admin (only admin can use the bot)
+        if self.config.admin_user_id and user_id != self.config.admin_user_id:
+            await update.message.reply_text(
+                "❌ Only the bot administrator has permission to use AdminKroha!"
+            )
+            return
+
+        # Interactive scheldue creation
+        await update.message.reply_text(
+            "🚀 **AdminKroha Scheldue Creator** 🚀\n\n"
+            "Let's create a scheduled post with polls, tickers, and hashtags!\n\n"
+            "**Step 1:** Provide the scheduled time (HH:MM format)\n"
+            "Example: `14:30` for 2:30 PM\n\n"
+            "**Step 2:** Provide the content details\n"
+            "You can include:\n"
+            "  • Question: \"Will BTC rise?\"\n"
+            "  • Options: Yes No Maybe\n"
+            "  • Tickers: $btc $eth $sol or BTCUSDT ETHUSDT\n"
+            "  • Hashtags: #crypto #bitcoin\n"
+            "  • Regular content after options\n\n"
+            "**Example:** `14:30 \"Will BTC rise?\" Yes No Maybe $btc #crypto`\n\n"
+            "Please provide your scheduled time and details:"
+        )
+
+        # Store scheldue creation state
+        if user_id not in self.user_data:
+            self.user_data[user_id] = {}
+        self.user_data[user_id]['scheldue_step'] = 'waiting_for_details'
+        self.user_data[user_id]['scheldue_username'] = username
+
+    async def scheldue_details_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle scheldue details after interactive setup.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+
+        # Check if user is in scheldue creation process
+        if user_id not in self.user_data or self.user_data[user_id].get('scheldue_step') != 'waiting_for_details':
+            return
+
+        scheldue_details = update.message.text.strip()
+
+        try:
+            # Parse scheldue details
+            scheldue_data = self._parse_scheldue_details(scheldue_details)
+
+            if not scheldue_data:
+                await update.message.reply_text(
+                    "❌ Invalid scheldue format!\n"
+                    "Please provide details in format: [question] [options] [tickers] [hashtags] [content]\n"
+                    "Example: `\"Will BTC rise?\" Yes No Maybe $btc #crypto`\n"
+                    "Example: `\"Daily analysis\" \"BTC: $45k\" #crypto`\n"
+                    "Please try again:"
+                )
+                return
+
+            # Send interactive time input
+            await update.message.reply_text(
+                "⏰ **Step 2:** Please provide the scheduled time (HH:MM format):\n"
+                "Example: `14:30` for 2:30 PM\n"
+                "Example: `09:00` for 9:00 AM\n"
+                "Please enter the time:"
+            )
+
+            # Store scheldue data temporarily
+            self.user_data[user_id]['scheldue_data'] = scheldue_data
+            self.user_data[user_id]['scheldue_step'] = 'waiting_for_time'
+
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error processing scheldue details: {e}")
+            logger.error(f"Error processing scheldue details for user {user_id}: {e}")
+
+    async def scheldue_time_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle scheldue time input after interactive setup.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+
+        # Check if user is waiting for time input
+        if user_id not in self.user_data or self.user_data[user_id].get('scheldue_step') != 'waiting_for_time':
+            return
+
+        time_str = update.message.text.strip()
+
+        try:
+            # Parse time
+            scheduled_time = self._parse_time(time_str)
+            if not scheduled_time:
+                await update.message.reply_text(
+                    "❌ Invalid time format! Use HH:MM format (24 hours)\n"
+                    "Example: `14:30` for 2:30 PM\n"
+                    "Please enter the time again:"
+                )
+                return
+
+            # Complete scheldue creation
+            scheldue_data = self.user_data[user_id]['scheldue_data']
+            username = self.user_data[user_id]['scheldue_username']
+
+            # Create scheldue post
+            post_id = await self._create_scheldue_post(
+                scheduled_time,
+                scheldue_data,
+                user_id,
+                username
+            )
+
+            # Clear temporary data
+            del self.user_data[user_id]['scheldue_data']
+            del self.user_data[user_id]['scheldue_step']
+            del self.user_data[user_id]['scheldue_username']
+
+            # Send success message
+            await update.message.reply_text(
+                f"✅ **Scheldue Post Scheduled Successfully!** 🎉\n\n"
+                f"📝 **Question:** {scheldue_data.get('question', 'N/A')}\n"
+                f"🗳️ **Options:** {', '.join(scheldue_data.get('options', []))}\n"
+                f"📊 **Tickers:** {', '.join(scheldue_data.get('tickers', []))}\n"
+                f"🏷️ **Hashtags:** {', '.join(scheldue_data.get('hashtags', []))}\n"
+                f"⏰ **Scheduled Time:** {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"🆔 **Scheldue ID:** {post_id}\n\n"
+                f"This scheldue will be posted automatically with poll, tickers, and hashtags!\n\n"
+                f"📋 **Next steps:**\n"
+                f"• `/scheldue` - Create another scheldue\n"
+                f"• `/status` - Check bot status\n"
+                f"• `/list-reminders` - Manage reminders\n"
+                f"• `/help` - View all commands"
+            )
+
+            logger.info(f"User {username} (ID: {user_id}) created scheldue post {post_id}")
+
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error scheduling scheldue: {e}")
+            logger.error(f"Error scheduling scheldue for user {user_id}: {e}")
 
     async def post_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -349,6 +642,457 @@ class BinanceSquareBot:
             error_message = f"❌ Error getting ticker data: {str(e)}\n"
             await update.message.reply_text(error_message)
             logger.error(f"Error getting ticker data for user {username}: {e}")
+
+    async def _parse_scheldue_details(self, details: str) -> Optional[Dict[str, Any]]:
+        """
+        Parse scheldue details from string.
+
+        Args:
+            details: Scheldue details string
+
+        Returns:
+            Parsed scheldue data or None if invalid
+        """
+        try:
+            # Split by spaces but handle quoted strings
+            import shlex
+            parts = shlex.split(details)
+
+            scheldue_data = {
+                'question': None,
+                'options': [],
+                'tickers': [],
+                'hashtags': [],
+                'content': None
+            }
+
+            current_field = None
+
+            for part in parts:
+                if part.startswith('"') and part.endswith('"'):
+                    # Remove quotes from quoted strings
+                    part = part[1:-1]
+
+                if not current_field:
+                    # First non-empty part is the question
+                    if part and not part.startswith('#') and not part.startswith('$') and ' ' not in part:
+                        scheldue_data['question'] = part
+                    else:
+                        scheldue_data['content'] = part
+                elif current_field == 'question':
+                    scheldue_data['question'] = part
+                    current_field = None
+                elif current_field == 'options':
+                    scheldue_data['options'].append(part)
+                elif current_field == 'tickers':
+                    if part.startswith('$'):
+                        scheldue_data['tickers'].append(part[1:])
+                    else:
+                        scheldue_data['tickers'].append(part)
+                elif current_field == 'hashtags':
+                    if part.startswith('#'):
+                        scheldue_data['hashtags'].append(part)
+                    else:
+                        scheldue_data['content'] = part
+                else:
+                    scheldue_data['content'] = part
+
+            # Validate required fields
+            if not scheldue_data['question']:
+                return None
+
+            # Extract tickers and hashtags from content if not already found
+            if scheldue_data['content']:
+                import re
+                ticker_pattern = r'\$(\w+)|(\b\w+USDT\b)'
+                hashtag_pattern = r'#(\w+)'
+
+                ticker_matches = re.findall(ticker_pattern, scheldue_data['content'])
+                hashtag_matches = re.findall(hashtag_pattern, scheldue_data['content'])
+
+                # Flatten ticker matches
+                for match in ticker_matches:
+                    if match[0]:
+                        scheldue_data['tickers'].append(match[0])
+                    elif match[1]:
+                        scheldue_data['tickers'].append(match[1])
+
+                # Add hashtag matches
+                scheldue_data['hashtags'].extend([f'#{tag}' for tag in hashtag_matches])
+
+                # Clean content from tickers and hashtags
+                clean_content = scheldue_data['content']
+                for ticker in scheldue_data['tickers']:
+                    clean_content = clean_content.replace(f'${ticker}', '').replace(ticker + 'USDT', '')
+                for hashtag in scheldue_data['hashtags']:
+                    clean_content = clean_content.replace(hashtag, '')
+
+                scheldue_data['content'] = clean_content.strip()
+
+            # Remove empty lists
+            scheldue_data = {k: v for k, v in scheldue_data.items() if v}
+
+            return scheldue_data
+
+        except Exception:
+            return None
+
+    async def _create_scheldue_post(
+        self,
+        scheduled_time: datetime,
+        scheldue_data: Dict[str, Any],
+        user_id: int,
+        username: str
+    ) -> str:
+        """
+        Create a scheldue post with all features.
+
+        Args:
+            scheduled_time: When to schedule the post
+            scheldue_data: Parsed scheldue data
+            user_id: User ID
+            username: Username
+
+        Returns:
+            Post ID
+        """
+        # Generate scheldue content
+        scheldue_content = await self._generate_scheldue_content(scheldue_data)
+
+        # Schedule the scheldue post
+        post_id = await self.scheduler.schedule_post(
+            scheduled_time,
+            scheldue_content,
+            user_id,
+            {
+                'type': 'scheldue',
+                'question': scheldue_data.get('question'),
+                'options': scheldue_data.get('options', []),
+                'tickers': scheldue_data.get('tickers', []),
+                'hashtags': scheldue_data.get('hashtags', [])
+            }
+        )
+
+        # Store scheldue info
+        if user_id not in self.scheduled_posts:
+            self.scheduled_posts.append({
+                'id': post_id,
+                'time': scheduled_time,
+                'content': scheldue_content,
+                'user_id': user_id,
+                'type': 'scheldue',
+                'scheldue_data': scheldue_data
+            })
+
+        logger.info(f"User {username} created scheldue post {post_id} with question: {scheldue_data.get('question', 'N/A')}")
+        return post_id
+
+    async def _generate_scheldue_content(self, scheldue_data: Dict[str, Any]) -> str:
+        """
+        Generate scheldue content with polls, tickers, and hashtags.
+
+        Args:
+            scheldue_data: Scheldue data
+
+        Returns:
+            Generated content
+        """
+        content_parts = []
+
+        # Add question
+        if scheldue_data.get('question'):
+            content_parts.append(f"**{scheldue_data['question']}**\n")
+
+        # Add options if present
+        if scheldue_data.get('options'):
+            content_parts.append("\n🗳️ **Options:**\n")
+            for i, option in enumerate(scheldue_data['options'], 1):
+                content_parts.append(f"{i}. {option}")
+
+        # Add ticker information
+        if scheldue_data.get('tickers'):
+            content_parts.append("\n📊 **Market Data:**\n")
+            # Format tickers with prices
+            for ticker in scheldue_data['tickers']:
+                content_parts.append(f"• ${ticker}")
+
+        # Add hashtags
+        if scheldue_data.get('hashtags'):
+            content_parts.append("\n🏷️ **Topics:**\n")
+            for hashtag in scheldue_data['hashtags']:
+                content_parts.append(f"#{hashtag}")
+
+        # Add regular content if present
+        if scheldue_data.get('content') and scheldue_data['content'].strip():
+            content_parts.append(f"\n📝 **Additional Content:**\n{ scheldue_data['content'] }")
+
+        # Join all parts
+        return "\n".join(content_parts)
+
+    async def scheldue_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /scheldue command.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        # Security check: only allow private messages
+        if update.effective_chat.type != 'private':
+            await update.message.reply_text(
+                "❌ This bot only works in private messages! "
+                "Please message me directly to use AdminKroha."
+            )
+            logger.warning(f"User {username} (ID: {user_id}) tried to use scheldue in group chat")
+            return
+
+        # Check if user is admin (only admin can use the bot)
+        if self.config.admin_user_id and user_id != self.config.admin_user_id:
+            await update.message.reply_text(
+                "❌ Only the bot administrator has permission to use AdminKroha!"
+            )
+            logger.warning(f"User {username} (ID: {user_id}) tried to use scheldue without admin permissions")
+            return
+
+        if not context.args:
+            await update.message.reply_text(
+                "❌ Please provide scheldue details!\n"
+                "Usage: `/scheldue <time> <details>`\n"
+                "Examples:\n"
+                "  `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc`\n"
+                "  `/scheldue 09:00 \"Daily analysis\" \"BTC: $45k\" #crypto`\n\n"
+                "Details can include:\n"
+                "  • Question for poll: \"Will BTC rise?\"\n"
+                "  • Options: Yes No Maybe\n"
+                "  • Tickers: $btc $eth $sol (with or without $)\n"
+                "  • Hashtags: #crypto #bitcoin\n"
+                "  • Content for regular post after options\n\n"
+                "For interactive scheldue creation, use: `/scheldue`"
+            )
+            return
+
+        time_str = context.args[0]
+        details = ' '.join(context.args[1:])
+
+        try:
+            # Parse scheldue details
+            scheldue_data = self._parse_scheldue_details(details)
+
+            if not scheldue_data:
+                await update.message.reply_text(
+                    "❌ Invalid scheldue format!\n"
+                    "Please provide details in format: [question] [options] [tickers] [hashtags] [content]\n"
+                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc #crypto`\n"
+                    "Example: `/scheldue 09:00 \"Daily analysis\" \"BTC: $45k\" #crypto`\n"
+                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc $eth\""
+                )
+                return
+
+            # Schedule the scheldue post
+            scheduled_time = self._parse_time(time_str)
+            if not scheduled_time:
+                await update.message.reply_text(
+                    "❌ Invalid time format! Use HH:MM format (24 hours)\n"
+                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc`"
+                )
+                return
+
+            # Create scheldue post with all features
+            post_id = await self._create_scheldue_post(
+                scheduled_time,
+                scheldue_data,
+                user_id,
+                username
+            )
+
+            success_message = (
+                f"🚀 **Scheldue Post Scheduled Successfully!** 🎉\n\n"
+                f"📝 **Question:** {scheldue_data.get('question', 'N/A')}\n"
+                f"🗳️ **Options:** {', '.join(scheldue_data.get('options', []))}\n"
+                f"📊 **Tickers:** {', '.join(scheldue_data.get('tickers', []))}\n"
+                f"🏷️ **Hashtags:** {', '.join(scheldue_data.get('hashtags', []))}\n"
+                f"⏰ **Scheduled Time:** {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"🆔 **Scheldue ID:** {post_id}\n\n"
+                f"This scheldue will be posted automatically with poll, tickers, and hashtags!\n\n"
+                f"📋 **Next steps:**\n"
+                f"• `/scheldue` - Create another scheldue\n"
+                f"• `/status` - Check bot status\n"
+                f"• `/list-reminders` - Manage reminders\n"
+                f"• `/help` - View all commands"
+            )
+
+            await update.message.reply_text(success_message)
+            logger.info(f"User {username} scheduled scheldue: {details[:50]}...")
+
+        except Exception as e:
+            error_message = f"❌ Error scheduling scheldue: {str(e)}\n"
+            await update.message.reply_text(error_message)
+            logger.error(f"Error scheduling scheldue for user {username}: {e}")
+
+    async def scheldue_command_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle scheldue command with interactive interface.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        # Security check: only allow private messages
+        if update.effective_chat.type != 'private':
+            await update.message.reply_text(
+                "❌ This bot only works in private messages! "
+                "Please message me directly to use AdminKroha."
+            )
+            return
+
+        # Check if user is admin (only admin can use the bot)
+        if self.config.admin_user_id and user_id != self.config.admin_user_id:
+            await update.message.reply_text(
+                "❌ Only the bot administrator has permission to use AdminKroha!"
+            )
+            return
+
+        # Interactive scheldue creation
+        await update.message.reply_text(
+            "🚀 **AdminKroha Scheldue Creator** 🚀\n\n"
+            "Let's create a scheduled post with polls, tickers, and hashtags!\n\n"
+            "**Step 1:** Provide the scheduled time (HH:MM format)\n"
+            "Example: `14:30` for 2:30 PM\n\n"
+            "**Step 2:** Provide the content details\n"
+            "You can include:\n"
+            "  • Question: \"Will BTC rise?\"\n"
+            "  • Options: Yes No Maybe\n"
+            "  • Tickers: $btc $eth $sol or BTCUSDT ETHUSDT\n"
+            "  • Hashtags: #crypto #bitcoin\n"
+            "  • Regular content after options\n\n"
+            "**Example:** `14:30 \"Will BTC rise?\" Yes No Maybe $btc #crypto`\n\n"
+            "Please provide your scheduled time and details:"
+        )
+
+        # Store scheldue creation state
+        if user_id not in self.user_data:
+            self.user_data[user_id] = {}
+        self.user_data[user_id]['scheldue_step'] = 'waiting_for_details'
+        self.user_data[user_id]['scheldue_username'] = username
+
+    async def scheldue_details_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle scheldue details after interactive setup.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+
+        # Check if user is in scheldue creation process
+        if user_id not in self.user_data or self.user_data[user_id].get('scheldue_step') != 'waiting_for_details':
+            return
+
+        scheldue_details = update.message.text.strip()
+
+        try:
+            # Parse scheldue details
+            scheldue_data = self._parse_scheldue_details(scheldue_details)
+
+            if not scheldue_data:
+                await update.message.reply_text(
+                    "❌ Invalid scheldue format!\n"
+                    "Please provide details in format: [question] [options] [tickers] [hashtags] [content]\n"
+                    "Example: `\"Will BTC rise?\" Yes No Maybe $btc #crypto`\n"
+                    "Example: `\"Daily analysis\" \"BTC: $45k\" #crypto`\n"
+                    "Please try again:"
+                )
+                return
+
+            # Send interactive time input
+            await update.message.reply_text(
+                "⏰ **Step 2:** Please provide the scheduled time (HH:MM format):\n"
+                "Example: `14:30` for 2:30 PM\n"
+                "Example: `09:00` for 9:00 AM\n"
+                "Please enter the time:"
+            )
+
+            # Store scheldue data temporarily
+            self.user_data[user_id]['scheldue_data'] = scheldue_data
+            self.user_data[user_id]['scheldue_step'] = 'waiting_for_time'
+
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error processing scheldue details: {e}")
+            logger.error(f"Error processing scheldue details for user {user_id}: {e}")
+
+    async def scheldue_time_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle scheldue time input after interactive setup.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+
+        # Check if user is waiting for time input
+        if user_id not in self.user_data or self.user_data[user_id].get('scheldue_step') != 'waiting_for_time':
+            return
+
+        time_str = update.message.text.strip()
+
+        try:
+            # Parse time
+            scheduled_time = self._parse_time(time_str)
+            if not scheduled_time:
+                await update.message.reply_text(
+                    "❌ Invalid time format! Use HH:MM format (24 hours)\n"
+                    "Example: `14:30` for 2:30 PM\n"
+                    "Please enter the time again:"
+                )
+                return
+
+            # Complete scheldue creation
+            scheldue_data = self.user_data[user_id]['scheldue_data']
+            username = self.user_data[user_id]['scheldue_username']
+
+            # Create scheldue post
+            post_id = await self._create_scheldue_post(
+                scheduled_time,
+                scheldue_data,
+                user_id,
+                username
+            )
+
+            # Clear temporary data
+            del self.user_data[user_id]['scheldue_data']
+            del self.user_data[user_id]['scheldue_step']
+            del self.user_data[user_id]['scheldue_username']
+
+            # Send success message
+            await update.message.reply_text(
+                f"✅ **Scheldue Post Scheduled Successfully!** 🎉\n\n"
+                f"📝 **Question:** {scheldue_data.get('question', 'N/A')}\n"
+                f"🗳️ **Options:** {', '.join(scheldue_data.get('options', []))}\n"
+                f"📊 **Tickers:** {', '.join(scheldue_data.get('tickers', []))}\n"
+                f"🏷️ **Hashtags:** {', '.join(scheldue_data.get('hashtags', []))}\n"
+                f"⏰ **Scheduled Time:** {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"🆔 **Scheldue ID:** {post_id}\n\n"
+                f"This scheldue will be posted automatically with poll, tickers, and hashtags!\n\n"
+                f"📋 **Next steps:**\n"
+                f"• `/scheldue` - Create another scheldue\n"
+                f"• `/status` - Check bot status\n"
+                f"• `/list-reminders` - Manage reminders\n"
+                f"• `/help` - View all commands"
+            )
+
+            logger.info(f"User {username} (ID: {user_id}) created scheldue post {post_id}")
+
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error scheduling scheldue: {e}")
+            logger.error(f"Error scheduling scheldue for user {user_id}: {e}")
 
     async def poll_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -915,6 +1659,14 @@ class BinanceSquareBot:
 
         # Add message handler for photos
         application.add_handler(MessageHandler(filters.PHOTO, self.handle_photo))
+
+        # Add scheldue command handlers
+        application.add_handler(CommandHandler("scheldue", self.scheldue_command))
+        application.add_handler(CommandHandler("scheldue", self.scheldue_command_handler))
+
+        # Add scheldue details handler
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.scheldue_details_handler))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.scheldue_time_handler))
 
         # Start the bot
         logger.info("Bot starting...")
