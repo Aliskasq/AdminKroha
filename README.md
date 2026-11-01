@@ -87,7 +87,7 @@ AdminKroha is a next-generation Telegram bot that allows users to post content t
 
 ```bash
 # Clone this repository
-git clone https://github.com/AdminKroha/AdminKroha.git
+git clone https://github.com/Aliskasq/AdminKroha.git
 
 # Navigate to the project directory
 cd AdminKroha
@@ -140,8 +140,14 @@ cp configs/.env.example .env
 # Telegram Bot Token (from @BotFather)
 BOT_TOKEN=your_telegram_bot_token_here
 
+# Telegram Group ID (required - get from @userinfobot after adding bot to your group)
+TELEGRAM_GROUP_ID=your_telegram_group_chat_id
+
 # Binance Square API Key
 BINANCE_API_KEY=your_binance_square_api_key_here
+
+# Binance Square API Secret
+BINANCE_API_SECRET=your_binance_square_api_secret_here
 
 # Optional: Admin user ID (for admin commands)
 ADMIN_USER_ID=your_telegram_user_id
@@ -214,6 +220,45 @@ sudo systemctl restart admin-kroha
 # Stop if needed
 sudo systemctl stop admin-kroha
 ```
+
+## 📱 Important: Telegram Group Access
+
+### ⚠️ **Bot Access Restrictions**
+
+**AdminKroha now requires Telegram group access to function.** The bot only works in **group chats and supergroups**, not in private messages.
+
+### 🔧 **How to Add the Bot to Your Group**
+
+1. **Add the bot to your Telegram group**
+   - Find the AdminKroha bot in Telegram
+   - Add it to your group chat or supergroup
+
+2. **Get your Group ID**
+   - Open `@userinfobot` in your group chat
+   - The group ID will be displayed (format: `-1001234567890`)
+   - Copy this ID and paste it into the `TELEGRAM_GROUP_ID` field in your `.env` file
+
+### 📝 **Environment Variable Setup**
+
+In your `.env` file, add the required `TELEGRAM_GROUP_ID`:
+
+```bash
+TELEGRAM_GROUP_ID=your_telegram_group_chat_id  # Format: -1001234567890
+```
+
+### ❌ **What the Bot Won't Do**
+
+- **Private messages:** The bot will not respond to private messages
+- **One-on-one chats:** Cannot be used in direct messages with users
+- **Personal chats:** No functionality in individual conversations
+
+### ✅ **What the Bot Can Do**
+
+- **Group chat posting:** Send messages to Binance Square from your Telegram group
+- **Reminder management:** Set and manage reminders within your group
+- **Community features:** Share content and analytics with group members
+
+> **Note:** Make sure to add the bot to your group and provide the correct Group ID in the `.env` file before starting the bot.
 
 ## 🔔 Reminder System
 
