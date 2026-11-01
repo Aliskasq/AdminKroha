@@ -2,343 +2,286 @@
 
 ## 🚀 Welcome to AdminKroha
 
-**AdminKroha is an advanced Telegram bot for Binance Square with 24/7 operation via systemd, enhanced virtual environment setup, and a comprehensive reminder system.** It builds upon the original Telegram Binance Bot with powerful new features for production deployment.
+**AdminKroha — это продвинутый Telegram-бот для публикации контента в Binance Square.** Поддерживает круглосуточную работу через systemd, улучшенное виртуальное окружение и расширенную систему напоминаний.
 
 ![Bot Logo](https://github.com/Aliskasq/AdminKroha/blob/main/docs/logo.png?raw=true)
 
-## 📋 Overview
+## 📋 Обзор
 
-AdminKroha is a next-generation Telegram bot that allows users to post content to Binance Square via Telegram commands. It features:
+AdminKroha — это бот нового поколения, позволяющий пользователям публиковать контент в Binance Square через команды Telegram. Особенности:
 
-- **24/7 Production Operation**: Systemd service for continuous uptime
-- **Python 3.11+ Virtual Environment**: Enhanced dependency management
-- **Advanced Reminder System**: Customizable time and days of week
-- **Real-time Market Data**: Cryptocurrency ticker integration
-- **Content Scheduling**: Automatic post scheduling with preview
-- **Multi-language Support**: Internationalization-ready
-- **Advanced Analytics**: Comprehensive bot statistics
-- **Security Hardening**: Production-ready security measures
+- **🔒 Работа только в группах** — бот отвечает только в групповых чатах и супергруппах
+- **👮 Права администратора** — команды доступны только администраторам группы
+- **📝 Публикация постов** — текст, изображения, опросы с тикерами
+- **🔔 Система напоминаний** — гибкое расписание по времени и дням недели
+- **📊 Данные тикеров** — реальные курсы криптовалют
+- **⏰ Планировщик постов** — отложенная публикация
+- **🛡️ Production-ready** — systemd, логирование, лимиты ресурсов
+- **🇷🇺 Полностью на русском языке**
 
-## ✨ Key Features
+## ✨ Основные функции
 
-### 🔒 Enhanced Security
-- **Group-Only Access**: Bot works only in group chats and supergroups
-- **Admin-Only Privileges**: Only bot administrators can use the bot
-- **Access Control**: Secure authentication and authorization
-- **Security Hardening**: Multiple security layers for protection
+### 🔒 Безопасность
+- **Только группы**: бот работает только в групповых чатах и супергруппах
+- **Только админы**: команды доступны только администраторам группы
+- **Контроль доступа**: проверка прав через Telegram API
 
-### 🔔 Advanced Reminder System
-- **Customizable Time & Days**: Set reminders for specific times and days
-- **Multiple Types**: Task, market, analysis, news, and general reminders
-- **Flexible Scheduling**: Repeat daily, weekly, or custom day selections
-- **Easy Management**: Add, list, update, and remove reminders
-- **Immediate Trigger**: Manually trigger reminders when needed
+### 🔔 Система напоминаний
+- **Типы**: задача, рынок, анализ, новости, общее
+- **Время**: формат ЧЧ:ММ (24-часовой)
+- **Дни недели**: 0=Понедельник ... 6=Воскресенье (например: "0,2,4" = Пн/Ср/Пт)
+- **Управление**: добавление, список, удаление, обновление, принудительный запуск
 
-### 🛠️ Enhanced Virtual Environment
-- ** Panther 3.11+ Support**: Latest Python features and performance
-- **Automated Setup**: One-click virtual environment creation
-- **Dependency Management**: Automatic requirements installation
-- **Production Ready**: Optimized for 24/7 operation
+### 🛠️ Production развёртывание
+- **Python 3.11+** виртуальное окружение
+- **Systemd сервис** для 24/7 работы
+- **Автоперезапуск** при ошибках
+- **Логирование** в journald
+- **Ограничение ресурсов** (CPU, память, файловые дескрипторы)
 
-### 📊 24/7 Systemd Operation
-- **Automatic Restart**: Systemd manages bot lifecycle
-- **Resource Management**: CPU, memory, and file limits
-- **Logging Integration**: Journalctl integration for monitoring
-- **Security Hardening**: Read-only filesystem, private tmp
-- **Health Monitoring**: Automatic status checking
+## 📱 Команды Telegram
 
-### 📱 Telegram Commands
+### Базовые
+| Команда | Описание | Пример |
+|---------|----------|--------|
+| `/start` | Запуск бота и справка | `/start` |
+| `/help` | Показать все команды | `/help` |
+| `/status` | Статус бота и статистика | `/status` |
 
-#### Basic Commands
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/start` | Start the bot and show help | `/start` |
-| `/help` | Show all available commands | `/help` |
-| `/status` | Check bot status | `/status` |
+### Публикация контента
+| Команда | Описание | Пример |
+|---------|----------|--------|
+| `/post <текст>` | Опубликовать текст в Binance Square | `/post BTC пробивает уровень #crypto #trading` |
+| `/post_image <текст>` | Опубликовать с изображением | `/post_image Анализ рынка` (потом отправьте фото) |
+| `/get_tickers <тики>` | Получить данные тикеров | `/get_tickers BTCUSDT ETHUSDT SOLUSDT` |
+| `/poll <вопрос> <варианты>` | Создать опрос | `/poll Куда пойдёт BTC? Вверх Вниз Бок` |
+| `/schedule <время> <текст>` | Запланировать пост | `/schedule 14:30 Анализ на завтра` |
+| `/scheldue <время> <детали>` | Расширенное планирование | `/scheldue 14:30 "Вопрос?" Да Нет $btc #crypto` |
 
-#### Content Commands
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/post <text>` | Post text content to Binance Square | `/post BTC price breakout today #crypto #trading` |
-| `/post-image <text>` | Post content with image | `/post-image Market analysis` |
-| `/get-tickers <tickers>` | Get ticker data | `/get-tickers BTCUSDT ETHUSDT SOLUSDT` |
-| `/poll <question> <options>` | Create a poll | `/poll Will BTC go up? Yes No Maybe` |
-| `/schedule <time> <text>` | Schedule a post | `/schedule 14:30 Market analysis tomorrow` |
+### Напоминания
+| Команда | Описание | Пример |
+|---------|----------|--------|
+| `/add_reminder <тип> <время> [дни] [сообщение]` | Добавить напоминание | `/add_reminder task 09:00 Проверить задачи` |
+| `/list_reminders` | Список напоминаний | `/list_reminders` |
+| `/remove_reminder <id>` | Удалить напоминание | `/remove_reminder rem_123` |
+| `/update_reminder <id> <поле> <значение>` | Обновить напоминание | `/update_reminder rem_123 time 10:00` |
+| `/trigger_reminder <id>` | Запустить немедленно | `/trigger_reminder rem_123` |
 
-#### Reminder Commands
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/add-reminder <type> <time> [days] [message]` | Add new reminder | `/add-reminder task 09:00 Check daily tasks` |
-| `/list-reminders` | List all reminders | `/list-reminders` |
-| `/remove-reminder <id>` | Remove a reminder | `/remove-reminder rem_123` |
-| `/update-reminder <id> [updates]` | Update a reminder | `/update-reminder rem_123 time 10:00` |
-| `/trigger-reminder <id>` | Trigger reminder immediately | `/trigger-reminder rem_123` |
+**Типы напоминаний:** `task`, `market`, `analysis`, `news`, `general`
 
-## 🛠️ Installation and Setup
+**Примеры дней:** `0,2,4` (Пн/Ср/Пт), `5,6` (Сб/Вс), пусто = каждый день
 
-### Prerequisites
+## 🛠️ Установка и запуск
 
-- **Python 3.11+** (recommended for enhanced features)
-- **Linux system** with systemd (for 24/7 operation)
-- **Virtual environment** support (`python3-venv` package)
-- **Git** for repository management
+### Требования
+- **Python 3.11+** (рекомендуется для production)
+- **Linux** с systemd (для 24/7 работы)
+- **python3-venv** пакет
+- **Git**
 
-### Step 1: Clone the Repository
+### Способ 1: Автоматическая установка (рекомендуется)
 
 ```bash
-# Clone this repository
+# Клонировать репозиторий
 git clone https://github.com/Aliskasq/AdminKroha.git
-
-# Navigate to the project directory
 cd AdminKroha
-```
 
-### Step 2: Install Dependencies
-
-**Option A: Use Enhanced Installer (Recommended)**
-
-```bash
-# Run the enhanced installer
+# Запустить установщик
 python3 install.py
 
-# Follow the prompts for:
-# • Python 3.11+ virtual environment setup
-# • Systemd service configuration
-# • Environment variable setup
+# Следовать инструкциям:
+# • Настройка Python 3.11+ venv
+# • Конфигурация systemd сервиса
+# • Настройка переменных окружения
 ```
 
-**Option B: Manual Installation**
+### Способ 2: Ручная установка
 
 ```bash
-# Check Python version
-python3 --version
+# 1. Клонировать
+git clone https://github.com/Aliskasq/AdminKroha.git
+cd AdminKroha
 
-# Create virtual environment (Python 3.11+ recommended)
+# 2. Проверить Python
+python3 --version  # должен быть 3.11+
+
+# 3. Создать виртуальное окружение
 python3 -m venv venv_production
-
-# Activate virtual environment
-# On Linux/macOS:
 source venv_production/bin/activate
 
-# On Windows:
-venv_production\Scripts\activate
-
-# Install dependencies
+# 4. Установить зависимости
 pip install --upgrade pip
 pip install -r requirements.txt
-```
 
-### Step 3: Configure Environment Variables
-
-Create `.env` file from the example:
-
-```bash
-# Copy example to .env
+# 5. Настроить .env
 cp configs/.env.example .env
+# Отредактируйте .env с вашими ключами (см. ниже)
 
-# Edit .env with your credentials
-# Telegram Bot Token (from @BotFather)
-BOT_TOKEN=your_telegram_bot_token_here
-
-# Telegram Group ID (required - get from @userinfobot after adding bot to your group)
-TELEGRAM_GROUP_ID=your_telegram_group_chat_id
-
-# Binance Square API Key (only one key needed for posts)
-BINANCE_API_KEY=your_binance_square_api_key_here
-
-# Optional: Admin user ID (for admin commands)
-ADMIN_USER_ID=your_telegram_user_id
-
-# Optional: Log level
-LOG_LEVEL=INFO
-
-# Optional: Maximum post length
-MAX_POST_LENGTH=1000
-
-# Optional: Rate limit for API calls
-RATE_LIMIT=60
-```
-
-### Step 4: Create Directory Structure
-
-```bash
-# Create necessary directories
+# 6. Создать директории
 mkdir -p logs data configs systemd docs tests backups cache
 ```
 
-### Step 5: Configure Systemd Service
+### Настройка .env (обязательно!)
 
 ```bash
-# Copy enhanced systemd service file
+# Telegram Bot Token (от @BotFather)
+BOT_TOKEN=ваш_токен_бота
+
+# ID группы (получите через @userinfobot после добавления бота в группу)
+# Формат: -1001234567890
+TELEGRAM_GROUP_ID=-100xxxxxxxxxx
+
+# Binance Square API Key (один ключ для постов)
+BINANCE_API_KEY=ваш_ключ_binance
+
+# Опционально: ID админа (для некоторых функций)
+ADMIN_USER_ID=123456789
+
+# Настройки бота
+LOG_LEVEL=INFO
+MAX_POST_LENGTH=1000
+RATE_LIMIT=60
+ENABLE_SCHEDULED_POSTS=true
+ENABLE_AUTO_REPLIES=true
+ALLOWED_HASHTAGS=#crypto,#btc,#eth,#trading,#binance,#square
+DEFAULT_POST_TYPE=text
+```
+
+### Настройка Systemd (для production)
+
+```bash
+# Скопировать сервис
 sudo cp systemd/admin-kroha.service /etc/systemd/system/
 
-# Reload systemd
+# ВАЖНО: Отредактировать пути в сервисе под ваш сервер!
+# WorkingDirectory=/путь/к/AdminKroha
+# ExecStart=/путь/к/venv_production/bin/python main.py
+# User=ваш_пользователь
+
+# Перезагрузить systemd
 sudo systemctl daemon-reload
 
-# Enable and start service
+# Включить автозапуск и стартовать
 sudo systemctl enable admin-kroha
 sudo systemctl start admin-kroha
 
-# Check service status
+# Проверить статус
 sudo systemctl status admin-kroha
+
+# Логи
+sudo journalctl -u admin-kroha -f
 ```
 
-## 🚀 Quick Start
+## 🚀 Быстрый старт
 
-### For Development
-
+### Разработка
 ```bash
-# Activate virtual environment
-# On Linux/macOS:
 source venv_production/bin/activate
-
-# On Windows:
-venv_production\Scripts\activate
-
-# Run the bot
 python3 main.py
 ```
 
-### For Production
-
+### Production
 ```bash
-# Start with systemd
 sudo systemctl start admin-kroha
-
-# Check status
 sudo systemctl status admin-kroha
-
-# View logs
 sudo journalctl -u admin-kroha -f
-
-# Restart if needed
-sudo systemctl restart admin-kroha
-
-# Stop if needed
-sudo systemctl stop admin-kroha
 ```
 
-## 📱 Important: Telegram Group Access
+## ⚠️ Важно: Доступ к группе
 
-### ⚠️ **Bot Access Restrictions**
+**Бот работает ТОЛЬКО в групповых чатах!**
 
-**AdminKroha now requires Telegram group access to function.** The bot only works in **group chats and supergroups**, not in private messages.
+1. **Добавьте бота в вашу Telegram группу**
+2. **Сделайте бота администратором** (для получения списка админов)
+3. **Узнайте ID группы**: перешлите сообщение из группы боту @userinfobot
+4. **Вставьте ID в .env**: `TELEGRAM_GROUP_ID=-100xxxxxxxxxx`
 
-### 🔧 **How to Add the Bot to Your Group**
+❌ Бот **НЕ** отвечает в личных сообщениях
+✅ Команды работают **ТОЛЬКО для администраторов группы**
 
-1. **Add the bot to your Telegram group**
-   - Find the AdminKroha bot in Telegram
-   - Add it to your group chat or supergroup
+## 🔔 Система напоминаний — подробнее
 
-2. **Get your Group ID**
-   - Open `@userinfobot` in your group chat
-   - The group ID will be displayed (format: `-1001234567890`)
-   - Copy this ID and paste it into the `TELEGRAM_GROUP_ID` field in your `.env` file
-
-### 📝 **Environment Variable Setup**
-
-In your `.env` file, add the required `TELEGRAM_GROUP_ID`:
-
-```bash
-TELEGRAM_GROUP_ID=your_telegram_group_chat_id  # Format: -1001234567890
+### Добавление напоминания
+```
+/add_reminder <тип> <время> [дни] [сообщение]
 ```
 
-### ❌ **What the Bot Won't Do**
+**Параметры:**
+- `<тип>`: `task`, `market`, `analysis`, `news`, `general`
+- `<время>`: ЧЧ:ММ (24ч), например `09:00`, `14:30`
+- `[дни]`: дни недели через запятую (0=Пн, 6=Вс), например `0,2,4` или `5,6`
+- `[сообщение]`: текст напоминания
 
-- **Private messages:** The bot will not respond to private messages
-- **One-on-one chats:** Cannot be used in direct messages with users
-- **Personal chats:** No functionality in individual conversations
-
-### ✅ **What the Bot Can Do**
-
-- **Group chat posting:** Send messages to Binance Square from your Telegram group
-- **Reminder management:** Set and manage reminders within your group
-- **Community features:** Share content and analytics with group members
-
-> **Note:** Make sure to add the bot to your group and provide the correct Group ID in the `.env` file before starting the bot.
-
-## 🔔 Reminder System
-
-The AdminKroha bot includes an advanced reminder system with customizable schedules.
-
-### Adding a Reminder
-
+**Примеры:**
 ```
-/add-reminder <type> <time> [days] [message>
+/add_reminder task 09:00 Ежедневные задачи
+/add_reminder market 14:30 Проверка BTC #crypto 0,2,4
+/add_reminder analysis 19:00 Вечерний анализ
+/add_reminder news 08:00 Утренние новости
+/add_reminder general 17:00 Командный стендап
 ```
 
-**Parameters:**
-- `<type>`: Reminder type (task, market, analysis, news, general)
-- `<time>`: Time in HH:MM format (24-hour)
-- `[days]`: Days to trigger (0=Monday, 6=Sunday, e.g., "0,2,4" for Mon, Wed, Fri)
-- `[message]`: Custom reminder message
+### Управление
+- `/list_reminders` — показать все ваши напоминания
+- `/remove_reminder rem_123` — удалить по ID
+- `/update_reminder rem_123 time 10:00` — изменить время
+- `/update_reminder rem_123 days 1,3,5` — изменить дни
+- `/update_reminder rem_123 message Новый текст` — изменить сообщение
+- `/trigger_reminder rem_123` — выполнить прямо сейчас
 
-**Examples:**
-```
-/add-reminder task 09:00 Check daily tasks
-/add-reminder market 14:30 BTC price check #crypto
-/add-reminder analysis 19:00 Daily analysis reminder
-/add-reminder news 08:00 Morning news briefing
-/add-reminder general 17:00 Team standup
-```
-
-### Managing Reminders
-
-- `/list-reminders`: View all your reminders
-- `/remove-reminder <id>`: Remove a reminder
-- `/update-reminder <id> [updates]`: Update a reminder
-- `/trigger-reminder <id>`: Trigger immediately
-
-## 📁 Project Structure
+## 📁 Структура проекта
 
 ```
 AdminKroha/
 ├── src/
 │   ├── __init__.py
-│   ├── bot.py              # Main bot logic with reminder system
-│   ├── binance_api.py      # Binance Square API integration
-│   ├── content_generator.py # Content generation and formatting
-│   ├── image_handler.py   # Image processing and upload
-│   ├── scheduler.py       # Post scheduling
-│   ├── logger.py          # Logging configuration
-│   └── reminder.py        # Advanced reminder system
+│   ├── bot.py              # Основная логика бота + напоминания
+│   ├── config.py           # Конфигурация (dataclass Config)
+│   ├── binance_api.py      # Binance Square API
+│   ├── content_generator.py # Генерация контента
+│   ├── image_handler.py    # Обработка изображений
+│   ├── scheduler.py        # Планировщик постов
+│   ├── logger.py           # Логирование
+│   └── reminder.py         # Система напоминаний
 ├── configs/
-│   ├── .env.example       # Environment file example
-│   └── ecosystem.config.js # PM2 configuration
+│   └── .env.example        # Пример конфигурации
 ├── systemd/
-│   └── admin-kroha.service # Enhanced systemd service file
-├── logs/                  # Bot logs (auto-managed)
-├── data/                  # Data storage
-├── docs/                  # Documentation
-├── tests/                 # Tests
-├── backups/               # Backup files
-├── cache/                 # Cache files
-├── install.py            # Enhanced installation script
-├── main.py                # Entry point
-├── README.md              # This documentation
-└── requirements.txt       # Python dependencies
+│   └── admin-kroha.service # Systemd сервис
+├── logs/                   # Логи (авто)
+├── data/                   # Данные
+├── docs/                   # Документация
+├── tests/                  # Тесты
+├── backups/                # Бэкапы
+├── cache/                  # Кэш
+├── install.py              # Установщик
+├── main.py                 # Точка входа
+├── requirements.txt        # Зависимости
+└── README.md               # Этот файл
 ```
 
-## ⚙️ Configuration
+## ⚙️ Конфигурация
 
-### Environment Variables
+### Переменные окружения
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `BOT_TOKEN` | Telegram Bot Token | Yes |
-| `BINANCE_API_KEY` | Binance Square API Key | Yes |
-| `ADMIN_USER_ID` | Admin user ID | No |
-| `LOG_LEVEL` | Logging level (DEBUG, INFO, WARNING, ERROR) | No |
-| `MAX_POST_LENGTH` | Maximum post length | No |
-| `RATE_LIMIT` | Rate limit for API calls | No |
+| Переменная | Описание | Обязательна |
+|------------|----------|-------------|
+| `BOT_TOKEN` | Токен бота от @BotFather | Да |
+| `TELEGRAM_GROUP_ID` | ID группы (формат -100...) | Да |
+| `BINANCE_API_KEY` | API ключ Binance Square | Да |
+| `ADMIN_USER_ID` | ID админа (опционально) | Нет |
+| `LOG_LEVEL` | Уровень логов (DEBUG/INFO/WARNING/ERROR) | Нет |
+| `MAX_POST_LENGTH` | Макс. длина поста | Нет |
+| `RATE_LIMIT` | Лимит запросов/мин | Нет |
 
-### Bot Configuration
+### Настройка бота
 
-Edit `src/config.py` to adjust bot behavior:
+Редактируйте `src/config.py` для изменения поведения:
 
 ```python
+@dataclass
 class Config:
     BOT_TOKEN = os.getenv('BOT_TOKEN')
+    TELEGRAM_GROUP_ID = os.getenv('TELEGRAM_GROUP_ID')
     BINANCE_API_KEY = os.getenv('BINANCE_API_KEY')
     ADMIN_USER_ID = os.getenv('ADMIN_USER_ID')
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
@@ -346,246 +289,100 @@ class Config:
     RATE_LIMIT = int(os.getenv('RATE_LIMIT', '60'))
 ```
 
-## 📊 API Integration
+## 📊 API интеграции
 
 ### Binance Square API
+- **Пост**: `POST https://api.binance.com/square/api/v1/content`
+- **Изображение**: `POST https://api.binance.com/square/api/v1/image`
+- **Тикеры**: `GET https://api.binance.com/api/v3/ticker/24hr`
 
-The bot uses the Binance Square API to post content:
+### Telegram Bot API
+- Long polling через python-telegram-bot
+- Проверка админов через `getChatMember`
 
-#### Endpoints
+## 🐛 Устранение проблем
 
-- **Post Content**: `POST https://api.binance.com/square/api/v1/content`
-- **Upload Image**: `POST https://api.binance.com/square/api/v1/image`
-- **Get Tickers**: `GET https://api.binance.com/api/v3/ticker/24hr`
-
-#### API Key Setup
-
-1. Get a Binance Square API key from the Binance Square platform
-2. Ensure the key has necessary permissions
-3. Store the key securely in the `.env` file
-
-### Telegram API
-
-The bot uses the Telegram Bot API:
-
-#### Bot Creation
-
-1. Start a chat with [@BotFather](https://t.me/BotFather)
-2. Use `/newbot` to create a new bot
-3. Follow the instructions to get your bot token
-4. Set up webhook or use polling (polling recommended for this bot)
-
-## 👥 Bot Commands
-
-### Basic Commands
-
-- `/start` - Start the bot and show help
-- `/help` - Show all available commands
-
-### Content Commands
-
-- `/post <text>` - Post text content
-- `/post-image <text>` - Post content with image
-- `/get-tickers <tickers>` - Get ticker data
-- `/poll <question> <option1> <option2> ...` - Create a poll
-- `/schedule <time> <text>` - Schedule a post
-
-### Admin Commands
-
-- `/status` - Check bot status and statistics
-- `/broadcast <text>` - Send broadcast message (admin only)
-- `/logs` - View recent logs (admin only)
-
-### Reminder Commands
-
-- `/add-reminder <type> <time> [days] [message>` - Add new reminder
-- `/list-reminders` - List all reminders
-- `/remove-reminder <id>` - Remove a reminder
-- `/update-reminder <id> [updates]` - Update a reminder
-- `/trigger-reminder <id>` - Trigger immediately
-
-## 📈 Usage Examples
-
-### Posting to Binance Square
-
+### Бот не отвечает
 ```bash
-# Simple text post
-/bot post BTC price breakout today #crypto #trading
+# 1. Проверить статус
+sudo systemctl status admin-kroha
 
-# Post with ticker data
-/bot post BTC: $45,000 (+2.5%) ETH: $2,300 (+1.2%) #crypto
+# 2. Логи
+sudo journalctl -u admin-kroha --since "1 hour ago"
 
-# Post with hashtags
-/bot post Daily market analysis #bitcoin #ethereum #crypto
+# 3. Перезапуск
+sudo systemctl restart admin-kroha
 ```
 
-### Getting Ticker Data
+### Неверные API ключи
+- Проверьте токен в @BotFather
+- Проверьте Binance API ключ на платформе Binance Square
 
+### Ошибки прав доступа
+- Бот должен быть в группе
+- Пользователь должен быть админом группы
+- Проверьте `TELEGRAM_GROUP_ID` в .env
+
+### Отладка
 ```bash
-/bot get-tickers BTCUSDT ETHUSDT SOLUSDT
-
-# Output:
-BTCUSDT: $45,000 (+2.5%) | High: $46,000 | Low: $44,000
-ETHUSDT: $2,300 (+1.2%) | High: $2,350 | Low: $2,250
-SOLUSDT: $95 (+3.8%) | High: $100 | Low: $92
-```
-
-### Creating a Poll
-
-```bash
-/bot poll Will BTC go above $50k next week? Yes No Maybe
-
-# Output: Poll created with options:
-# 1. Yes
-# 2. No
-# 3. Maybe
-```
-
-### Using Reminders
-
-```bash
-# Add a daily task reminder
-/add-reminder task 09:00 Check daily tasks for tomorrow
-
-# Add a market update reminder for specific days
-/add-reminder market 14:30 BTC price check #crypto 0,2,4
-
-# View all reminders
-/list-reminders
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### Bot Not Responding
-
-1. **Check if bot is running**
-   ```bash
-   sudo systemctl status admin-kroha
-   ```
-
-2. **Check logs for errors**
-   ```bash
-   sudo journalctl -u admin-kroha --since "1 hour ago"
-   ```
-
-3. **Restart the bot**
-   ```bash
-   sudo systemctl restart admin-kroha
-   ```
-
-#### Invalid API Keys
-
-1. **Verify Telegram Bot Token**
-   - Go to [@BotFather](https://t.me/BotFather)
-   - Check if the token is correct
-
-2. **Verify Binance API Key**
-   - Go to Binance Square platform
-   - Check if the API key is valid and has permissions
-
-#### Permission Errors
-
-1. **Check if bot is added to the chat**
-   - Add the bot to your Telegram chat
-
-2. **Check admin permissions**
-   - Ensure the bot has necessary permissions in the chat
-
-### Debugging
-
-```bash
-# Enable debug logging
 export LOG_LEVEL=DEBUG
-
-# Run the bot with debug
 python3 main.py
 ```
 
-## 📚 Documentation
+## 📚 Документация
 
-### Bot API
+- `docs/` — подробная API документация
+- `src/config.py` — опции конфигурации
+- `CONTRIBUTING.md` — гайд по разработке
 
-See `docs/` for detailed API documentation.
+## 🆘 Поддержка
 
-### Configuration
+- **Issues**: https://github.com/Aliskasq/AdminKroha/issues
+- **Discussions**: https://github.com/Aliskasq/AdminKroha/discussions
+- **GitHub**: @AdminKroha
 
-See `src/config.py` for configuration options.
+## 📖 Лицензия
 
-### Development
+MIT License. См. `LICENSE`.
 
-See `CONTRIBUTING.md` for development guidelines.
+## 🌟 Авторы
 
-## 🆘 Support
+- Binance Square API — социальные посты
+- Telegram Bot API — платформа
+- Python Community — экосистема
+- Open Source Contributors
 
-### Issues
+## 🚀 Roadmap
 
-Report issues at: https://github.com/Aliskasq/AdminKroha/issues
-
-### Discussions
-
-Join the discussion at: https://github.com/Aliskasq/AdminKroha/discussions
-
-### Contact
-
-For direct support, contact the maintainer at:
-- GitHub: @AdminKroha
-- Email: [contact information]
-
-## 📖 License
-
-This project is licensed under the MIT License. See `LICENSE` for more information.
-
-## 🌟 Credits
-
-- **Binance Square API**: For providing social posting capabilities
-- **Telegram Bot API**: For providing messaging platform
-- **Python Community**: For providing the Python ecosystem
-- **Open Source Contributors**: For their contributions
-
-## 🚀 Future Development
-
-### Planned Features
-
-1. **Enhanced Analytics**: More detailed market analytics
-2. **Multi-language Support**: Support for multiple languages
-3. **Advanced Scheduling**: Smart scheduling based on market conditions
-4. **Real-time Data**: Live data streaming for prices
-5. **Web Interface**: Admin web interface for bot management
-6. **Mobile App**: Mobile app for bot control
-
-### Contributing
-
-We welcome contributions! Please see `CONTRIBUTING.md` for guidelines.
+1. **Расширенная аналитика** — детальная рыночная аналитика
+2. **Мультиязычность** — поддержка языков
+3. **Умное планирование** — на основе рыночных условий
+4. **Real-time данные** — стриминг цен
+5. **Web интерфейс** — админка для управления
+6. **Mobile app** — управление с телефона
 
 ## 🔄 Changelog
 
-### Version 2.0.0 (Current Release)
-- Complete systemd integration for 24/7 operation
-- Enhanced virtual environment with Python 3.11+ support
-- Advanced reminder system with customizable schedules
-- Improved security hardening
-- Enhanced documentation
-- Updated installation script
+### v2.1.0 (Current)
+- ✅ Бот полностью на русском языке
+- ✅ Команды для всех админов группы (не только хардкодного)
+- ✅ Ссылка на пост после публикации
+- ✅ Исправлен config.py, добавлен aiohttp
+- ✅ Обновлена документация
 
-### Version 1.0.0 (Initial Release)
-- Initial release with core functionality
-- Basic content posting
-- Ticker data integration
-- Simple polling system
-- Admin controls
+### v2.0.0
+- Systemd интеграция для 24/7
+- Python 3.11+ venv
+- Расширенные напоминания
+- Security hardening
 
-## 📧 Contact
-
-If you have any questions, suggestions, or need help, please:
-1. Create an issue on GitHub
-2. Start a discussion
-3. Contact the maintainer directly
-
-Thank you for using AdminKroha! 🌟
+### v1.0.0
+- Базовая функциональность
+- Публикация контента
+- Тикеры и опросы
 
 ---
-*This enhanced bot is designed and maintained by AdminKroha* 🌟
-*GitHub: https://github.com/AdminKroha* 📍
-*Version: 2.0.0* 📅
+
+**AdminKroha v2.1.0** — готов к production! 🌟
+
+*GitHub: https://github.com/Aliskasq/AdminKroha*
