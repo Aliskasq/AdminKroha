@@ -1,77 +1,130 @@
-# Telegram Bot for Binance Square
+# AdminKroha - Enhanced Telegram Bot for Binance Square
 
-## Overview
+## 🚀 Welcome to AdminKroha
 
-This repository contains a Python Telegram bot that allows users to post content to Binance Square (Binance's social platform) via Telegram commands. The bot supports posting various types of content including:
+**AdminKroha is an advanced Telegram bot for Binance Square with 24/7 operation via systemd, enhanced virtual environment setup, and a comprehensive reminder system.** It builds upon the original Telegram Binance Bot with powerful new features for production deployment.
 
-- Text posts with hashtags
-- Posts with images
-- Market analysis with cryptocurrency tickers
-- Interactive polls
-- Scheduled posts
+![Bot Logo](https://github.com/AdminKroha/AdminKroha/blob/main/docs/logo.png?raw=true)
 
-## Features
+## 📋 Overview
+
+AdminKroha is a next-generation Telegram bot that allows users to post content to Binance Square via Telegram commands. It features:
+
+- **24/7 Production Operation**: Systemd service for continuous uptime
+- **Python 3.11+ Virtual Environment**: Enhanced dependency management
+- **Advanced Reminder System**: Customizable time and days of week
+- **Real-time Market Data**: Cryptocurrency ticker integration
+- **Content Scheduling**: Automatic post scheduling with preview
+- **Multi-language Support**: Internationalization-ready
+- **Advanced Analytics**: Comprehensive bot statistics
+- **Security Hardening**: Production-ready security measures
+
+## ✨ Key Features
+
+### 🔔 Advanced Reminder System
+- **Customizable Time & Days**: Set reminders for specific times and days
+- **Multiple Types**: Task, market, analysis, news, and general reminders
+- **Flexible Scheduling**: Repeat daily, weekly, or custom day selections
+- **Easy Management**: Add, list, update, and remove reminders
+- **Immediate Trigger**: Manually trigger reminders when needed
+
+### 🛠️ Enhanced Virtual Environment
+- **Python 3.11+ Support**: Latest Python features and performance
+- **Automated Setup**: One-click virtual environment creation
+- **Dependency Management**: Automatic requirements installation
+- **Production Ready**: Optimized for 24/7 operation
+
+### 📊 24/7 Systemd Operation
+- **Automatic Restart**: Systemd manages bot lifecycle
+- **Resource Management**: CPU, memory, and file limits
+- **Logging Integration**: Journalctl integration for monitoring
+- **Security Hardening**: Read-only filesystem, private tmp
+- **Health Monitoring**: Automatic status checking
 
 ### 📱 Telegram Commands
 
+#### Basic Commands
 | Command | Description | Example |
 |---------|-------------|---------|
 | `/start` | Start the bot and show help | `/start` |
 | `/help` | Show all available commands | `/help` |
-| `/post <text>` | Post text content to Binance Square | `/post BTC price is up today #crypto #trading` |
-| `/post-image <text>` | Post content with image | `/post-image Market analysis` |
-| `/get-tickers <tickers>` | Get cryptocurrency ticker data | `/get-tickers BTCUSDT ETHUSDT` |
-| `/poll <question> <option1> <option2> <option3>` | Create a poll | `/poll Will BTC go up? Yes No Maybe` |
-| `/schedule <time> <text>` | Schedule a post | `/schedule 14:30 Market analysis tomorrow` |
 | `/status` | Check bot status | `/status` |
 
-### 📊 Binance Square Integration
+#### Content Commands
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/post <text>` | Post text content to Binance Square | `/post BTC price breakout today #crypto #trading` |
+| `/post-image <text>` | Post content with image | `/post-image Market analysis` |
+| `/get-tickers <tickers>` | Get ticker data | `/get-tickers BTCUSDT ETHUSDT SOLUSDT` |
+| `/poll <question> <options>` | Create a poll | `/poll Will BTC go up? Yes No Maybe` |
+| `/schedule <time> <text>` | Schedule a post | `/schedule 14:30 Market analysis tomorrow` |
 
-- **Auto-posting**: Automatically post content to Binance Square
-- **Hashtag support**: Full support for hashtags in posts
-- **Image handling**: Upload and post images with content
-- **Ticker integration**: Fetch and display real-time cryptocurrency data
-- **Error handling**: Robust error handling and retry logic
-
-### 🔧 Admin Controls
-
-- **Status monitoring**: Check bot status and health
-- **Log management**: View and manage bot logs
-- **Configuration**: Adjust bot settings
-- **Updates**: Automated update management
+#### Reminder Commands
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/add-reminder <type> <time> [days] [message]` | Add new reminder | `/add-reminder task 09:00 Check daily tasks` |
+| `/list-reminders` | List all reminders | `/list-reminders` |
+| `/remove-reminder <id>` | Remove a reminder | `/remove-reminder rem_123` |
+| `/update-reminder <id> [updates]` | Update a reminder | `/update-reminder rem_123 time 10:00` |
+| `/trigger-reminder <id>` | Trigger reminder immediately | `/trigger-reminder rem_123` |
 
 ## 🛠️ Installation and Setup
 
-### Requirements
+### Prerequisites
 
-- **Python 3.8+**
-- **Telegram Bot Token**: Get from [@BotFather](https://t.me/BotFather)
-- **Binance Square API Key**: Get from Binance Square platform
-- **VPS or Server** (for 24/7 operation)
+- **Python 3.11+** (recommended for enhanced features)
+- **Linux system** with systemd (for 24/7 operation)
+- **Virtual environment** support (`python3-venv` package)
+- **Git** for repository management
 
 ### Step 1: Clone the Repository
 
 ```bash
 # Clone this repository
-git clone https://github.com/AdminKroha/telegram-binance-bot.git
+git clone https://github.com/AdminKroha/AdminKroha.git
 
 # Navigate to the project directory
-cd telegram-binance-bot
+cd AdminKroha
 ```
 
 ### Step 2: Install Dependencies
 
+**Option A: Use Enhanced Installer (Recommended)**
+
 ```bash
-# Option 1: Use install.py script (recommended)
+# Run the enhanced installer
 python3 install.py
 
-# Option 2: Manual installation
-pip3 install -r requirements.txt
+# Follow the prompts for:
+# • Python 3.11+ virtual environment setup
+# • Systemd service configuration
+# • Environment variable setup
 ```
 
-### Step 3: Configure the Bot
+**Option B: Manual Installation**
 
-Create a `.env` file in the project directory:
+```bash
+# Check Python version
+python3 --version
+
+# Create virtual environment (Python 3.11+ recommended)
+python3 -m venv venv_production
+
+# Activate virtual environment
+# On Linux/macOS:
+source venv_production/bin/activate
+
+# On Windows:
+venv_production\Scripts\activate
+
+# Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### Step 3: Configure Environment Variables
+
+Create `.env` file from the example:
 
 ```bash
 # Copy example to .env
@@ -86,35 +139,39 @@ BINANCE_API_KEY=your_binance_square_api_key_here
 
 # Optional: Admin user ID (for admin commands)
 ADMIN_USER_ID=your_telegram_user_id
+
+# Optional: Log level
+LOG_LEVEL=INFO
+
+# Optional: Maximum post length
+MAX_POST_LENGTH=1000
+
+# Optional: Rate limit for API calls
+RATE_LIMIT=60
 ```
 
-### Step 4: Create Necessary Directories
+### Step 4: Create Directory Structure
 
 ```bash
+# Create necessary directories
 mkdir -p logs data configs systemd docs tests backups cache
 ```
 
-### Step 5: Run the Bot
+### Step 5: Configure Systemd Service
 
 ```bash
-# Method 1: Using PM2 (recommended for production)
-pm2 start ecosystem.config.js --name telegram-binance-bot
+# Copy enhanced systemd service file
+sudo cp systemd/admin-kroha.service /etc/systemd/system/
 
-# Method 2: Direct execution
-python3 main.py
+# Reload systemd
+sudo systemctl daemon-reload
 
-# Method 3: Using systemd (Linux)
-sudo systemctl start telegram-binance-bot
-sudo systemctl enable telegram-binance-bot
-```
+# Enable and start service
+sudo systemctl enable admin-kroha
+sudo systemctl start admin-kroha
 
-### Step 6: Testing
-
-```bash
-# Test the bot
-curl -X POST https://api.telegram.org/bot<BOT_TOKEN>/sendMessage \
-  -H "Content-Type: application/json" \
-  -d '{"chat_id": "<YOUR_CHAT_ID>", "text": "/start"}'
+# Check service status
+sudo systemctl status admin-kroha
 ```
 
 ## 🚀 Quick Start
@@ -122,8 +179,12 @@ curl -X POST https://api.telegram.org/bot<BOT_TOKEN>/sendMessage \
 ### For Development
 
 ```bash
-# Install dependencies
-pip3 install -r requirements.txt
+# Activate virtual environment
+# On Linux/macOS:
+source venv_production/bin/activate
+
+# On Windows:
+venv_production\Scripts\activate
 
 # Run the bot
 python3 main.py
@@ -132,50 +193,85 @@ python3 main.py
 ### For Production
 
 ```bash
-# Install dependencies
-pip3 install -r requirements.txt
+# Start with systemd
+sudo systemctl start admin-kroha
 
-# Setup PM2
-pm2 start ecosystem.config.js --name telegram-binance-bot
+# Check status
+sudo systemctl status admin-kroha
 
-# Setup systemd (optional)
-sudo cp systemd/telegram-binance-bot.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable telegram-binance-bot
-sudo systemctl start telegram-binance-bot
+# View logs
+sudo journalctl -u admin-kroha -f
+
+# Restart if needed
+sudo systemctl restart admin-kroha
+
+# Stop if needed
+sudo systemctl stop admin-kroha
 ```
+
+## 🔔 Reminder System
+
+The AdminKroha bot includes an advanced reminder system with customizable schedules.
+
+### Adding a Reminder
+
+```
+/add-reminder <type> <time> [days] [message>
+```
+
+**Parameters:**
+- `<type>`: Reminder type (task, market, analysis, news, general)
+- `<time>`: Time in HH:MM format (24-hour)
+- `[days]`: Days to trigger (0=Monday, 6=Sunday, e.g., "0,2,4" for Mon, Wed, Fri)
+- `[message]`: Custom reminder message
+
+**Examples:**
+```
+/add-reminder task 09:00 Check daily tasks
+/add-reminder market 14:30 BTC price check #crypto
+/add-reminder analysis 19:00 Daily analysis reminder
+/add-reminder news 08:00 Morning news briefing
+/add-reminder general 17:00 Team standup
+```
+
+### Managing Reminders
+
+- `/list-reminders`: View all your reminders
+- `/remove-reminder <id>`: Remove a reminder
+- `/update-reminder <id> [updates]`: Update a reminder
+- `/trigger-reminder <id>`: Trigger immediately
 
 ## 📁 Project Structure
 
 ```
-telegram-binance-bot/
+AdminKroha/
 ├── src/
 │   ├── __init__.py
-│   ├── bot.py              # Main bot logic
+│   ├── bot.py              # Main bot logic with reminder system
 │   ├── binance_api.py      # Binance Square API integration
 │   ├── content_generator.py # Content generation and formatting
 │   ├── image_handler.py   # Image processing and upload
 │   ├── scheduler.py       # Post scheduling
-│   └── logger.py          # Logging configuration
+│   ├── logger.py          # Logging configuration
+│   └── reminder.py        # Advanced reminder system
 ├── configs/
 │   ├── .env.example       # Environment file example
 │   └── ecosystem.config.js # PM2 configuration
 ├── systemd/
-│   └── telegram-binance-bot.service # Systemd service file
-├── logs/                  # Bot logs
+│   └── admin-kroha.service # Enhanced systemd service file
+├── logs/                  # Bot logs (auto-managed)
 ├── data/                  # Data storage
 ├── docs/                  # Documentation
 ├── tests/                 # Tests
 ├── backups/               # Backup files
 ├── cache/                 # Cache files
-├── install.py            # Installation script
+├── install.py            # Enhanced installation script
 ├── main.py                # Entry point
-├── README.md              # This file
-├── requirements.txt       # Python dependencies
-└── ecosystem.config.js    # PM2 configuration
+├── README.md              # This documentation
+└── requirements.txt       # Python dependencies
 ```
 
-## 🔧 Bot Configuration
+## ⚙️ Configuration
 
 ### Environment Variables
 
@@ -188,7 +284,7 @@ telegram-binance-bot/
 | `MAX_POST_LENGTH` | Maximum post length | No |
 | `RATE_LIMIT` | Rate limit for API calls | No |
 
-### Configuration Options
+### Bot Configuration
 
 Edit `src/config.py` to adjust bot behavior:
 
@@ -248,9 +344,17 @@ The bot uses the Telegram Bot API:
 
 ### Admin Commands
 
-- `/status` - Check bot status
-- `/logs` - View recent logs
+- `/status` - Check bot status and statistics
 - `/broadcast <text>` - Send broadcast message (admin only)
+- `/logs` - View recent logs (admin only)
+
+### Reminder Commands
+
+- `/add-reminder <type> <time> [days] [message>` - Add new reminder
+- `/list-reminders` - List all reminders
+- `/remove-reminder <id>` - Remove a reminder
+- `/update-reminder <id> [updates]` - Update a reminder
+- `/trigger-reminder <id>` - Trigger immediately
 
 ## 📈 Usage Examples
 
@@ -289,6 +393,19 @@ SOLUSDT: $95 (+3.8%) | High: $100 | Low: $92
 # 3. Maybe
 ```
 
+### Using Reminders
+
+```bash
+# Add a daily task reminder
+/add-reminder task 09:00 Check daily tasks for tomorrow
+
+# Add a market update reminder for specific days
+/add-reminder market 14:30 BTC price check #crypto 0,2,4
+
+# View all reminders
+/list-reminders
+```
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
@@ -297,17 +414,17 @@ SOLUSDT: $95 (+3.8%) | High: $100 | Low: $92
 
 1. **Check if bot is running**
    ```bash
-   pm2 logs telegram-binance-bot
+   sudo systemctl status admin-kroha
    ```
 
 2. **Check logs for errors**
    ```bash
-   pm2 monit
+   sudo journalctl -u admin-kroha --since "1 hour ago"
    ```
 
 3. **Restart the bot**
    ```bash
-   pm2 restart telegram-binance-bot
+   sudo systemctl restart admin-kroha
    ```
 
 #### Invalid API Keys
@@ -356,11 +473,11 @@ See `CONTRIBUTING.md` for development guidelines.
 
 ### Issues
 
-Report issues at: https://github.com/AdminKroha/telegram-binance-bot/issues
+Report issues at: https://github.com/AdminKroha/AdminKroha/issues
 
 ### Discussions
 
-Join the discussion at: https://github.com/AdminKroha/telegram-binance-bot/discussions
+Join the discussion at: https://github.com/AdminKroha/AdminKroha/discussions
 
 ### Contact
 
@@ -396,18 +513,20 @@ We welcome contributions! Please see `CONTRIBUTING.md` for guidelines.
 
 ## 🔄 Changelog
 
+### Version 2.0.0 (Current Release)
+- Complete systemd integration for 24/7 operation
+- Enhanced virtual environment with Python 3.11+ support
+- Advanced reminder system with customizable schedules
+- Improved security hardening
+- Enhanced documentation
+- Updated installation script
+
 ### Version 1.0.0 (Initial Release)
 - Initial release with core functionality
 - Basic content posting
 - Ticker data integration
 - Simple polling system
 - Admin controls
-
-### Version 1.1.0 (Upcoming)
-- Image upload support
-- Advanced scheduling
-- Enhanced analytics
-- Multi-language support
 
 ## 📧 Contact
 
@@ -416,9 +535,9 @@ If you have any questions, suggestions, or need help, please:
 2. Start a discussion
 3. Contact the maintainer directly
 
-Thank you for using the Telegram Bot for Binance Square! 🚀
+Thank you for using AdminKroha! 🌟
 
 ---
-*This bot is designed and maintained by AdminKroha* 🌟
+*This enhanced bot is designed and maintained by AdminKroha* 🌟
 *GitHub: https://github.com/AdminKroha* 📍
-*Version: 1.0.0* 📅
+*Version: 2.0.0* 📅

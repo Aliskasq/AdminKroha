@@ -20,6 +20,7 @@ from .content_generator import ContentGenerator
 from .image_handler import ImageHandler
 from .scheduler import PostScheduler
 from .logger import setup_logger
+from .reminder import ReminderManager
 
 logger = setup_logger(__name__)
 
@@ -38,6 +39,7 @@ class BinanceSquareBot:
         self.content_generator = ContentGenerator()
         self.image_handler = ImageHandler()
         self.scheduler = PostScheduler(config, self.binance_api)
+        self.reminder_manager = ReminderManager(config)
 
         # Setup logging
         logging.basicConfig(
@@ -531,6 +533,335 @@ class BinanceSquareBot:
             await update.message.reply_text(error_message)
             logger.error(f"Error scheduling post for user {username}: {e}")
 
+    async def add_reminder_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /add-reminder command.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        if not context.args:
+            await update.message.reply_text(
+                "❌ Please provide reminder details!\n"
+                "Usage: `/add-reminder <type> <time> [days] [message]`\n"
+                "Examples:\n"
+                "  `/add-reminder task 09:00 Task completed for today`\n"
+                "  `/add-reminder market 14:30 BTC price check #crypto`\n"
+                "  `/add-reminder analysis 19:00 End of trading session`\n\n"
+                "Reminder types: task, market, analysis, news, general"
+            )
+            return
+
+        # Parse arguments
+        args = context.args
+        reminder_type = args[0].lower()
+        time = args[1] if len(args) > 1 else "09:00"
+        days_of_week = None
+        message = ""
+
+        # Parse days of week if provided
+        if len(args) > 2 and args[2].lower() not in ['task', 'market', 'analysis', 'news', 'general']:
+            try:
+                # Parse days (e.g., "0,2,4" for Monday, Wednesday, Friday)
+                days_of_week = [int(d.strip()) for d in args[2].split(',')]
+                if len(args) > 3:
+                    message = ' '.join(args[3:])
+            except ValueError:
+                message = ' '.join(args[2:])
+        else:
+            # Use message from remaining args
+            if len(args) > 2:
+                message = ' '.join(args[2:])
+
+        try:
+            # Add the reminder
+            reminder_id = await self.reminder_manager.add_reminder(
+                reminder_type=reminder_type,
+                time=time,
+                days_of_week=days_of_week,
+                is_recurring=True,
+                message=message,
+                user_id=user_id
+            )
+
+            # Get day names for display
+            day_names = []
+            if days_of_week:
+                for day in days_of_week:
+                    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                    day_names.append(days[day % 7])
+                days_display = ', '.join(day_names)
+            else:
+                days_display = 'Every day'
+
+            success_message = (
+                f"✅ **Reminder Added Successfully!** 🎉\n\n"
+                f"🔔 **Type:** {reminder_type.title()}\n"
+                f"⏰ **Time:** {time}\n"
+                f"📅 **Days:** {days_display}\n"
+                f"💬 **Message:** {message}\n"
+                f"🆔 **Reminder ID:** {reminder_id}\n\n"
+                f"The reminder will notify you at the specified time on the selected days!"
+            )
+
+            await update.message.reply_text(success_message)
+            logger.info(f"User {username} added reminder {reminder_id}")
+
+        except Exception as e:
+            error_message = f"❌ Error adding reminder: {str(e)}\n"
+            await update.message.reply_text(error_message)
+            logger.error(f"Error adding reminder for user {username}: {e}")
+
+    async def list_reminders_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /list-reminders command.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        try:
+            # Get user's reminders
+            reminders = await self.reminder_manager.get_reminders(user_id)
+
+            if not reminders:
+                await update.message.reply_text(
+                    "📭 **No Reminders Found**\n\n"
+                    "You don't have any reminders set up yet.\n"
+                    "Use `/add-reminder` to add your first reminder!"
+                )
+                return
+
+            # Format reminders list
+            reminders_list = "🔔 **Your Reminders:**\n\n"
+
+            for reminder in reminders:
+                # Format days
+                days = reminder.get('days_of_week', [])
+                if days:
+                    day_names = []
+                    for day in days:
+                        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                        day_names.append(days[day % 7])
+                    days_display = ', '.join(day_names)
+                else:
+                    days_display = 'Every day'
+
+                # Format reminder status
+                next_triggered = reminder.get('next_triggered')
+                if next_triggered:
+                    try:
+                        next_time = datetime.fromisoformat(next_triggered)
+                        next_time_str = next_time.strftime('%Y-%m-%d %H:%M')
+                    except:
+                        next_time_str = 'Soon'
+                else:
+                    next_time_str = 'Soon'
+
+                reminders_list += (
+                    f"📌 **{reminder['reminder_type'].title()}**\n"
+                    f"   ⏰ Time: {reminder['time']} ({next_time_str})\n"
+                    f"   📅 Days: {days_display}\n"
+                    f"   💬 Message: {reminder['message']}\n"
+                    f"   🆔 ID: {reminder['reminder_id']}\n\n"
+                )
+
+            # Add some footer information
+            reminders_list += (
+                f"📊 **Total Reminders:** {len(reminders)}\n"
+                f"🔄 **Recurring:** {sum(1 for r in reminders if r.get('is_recurring', True))}\n"
+                f"📅 **Today Due:** {len([r for r in reminders if r.get('is_due_today', lambda: False)()])}\n\n"
+                f"💡 **Commands:**\n"
+                f"  • `/add-reminder <type> <time> [days] [message]` - Add new reminder\n"
+                f"  • `/remove-reminder <id>` - Remove reminder\n"
+                f"  • `/update-reminder <id> [updates]` - Update reminder\n"
+                f"  • `/trigger-reminder <id>` - Trigger reminder immediately\n"
+            )
+
+            await update.message.reply_text(reminders_list)
+            logger.info(f"User {username} listed reminders")
+
+        except Exception as e:
+            error_message = f"❌ Error listing reminders: {str(e)}\n"
+            await update.message.reply_text(error_message)
+            logger.error(f"Error listing reminders for user {username}: {e}")
+
+    async def remove_reminder_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /remove-reminder command.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        if not context.args:
+            await update.message.reply_text(
+                "❌ Please provide a reminder ID!\n"
+                "Usage: `/remove-reminder <reminder_id>`\n"
+                "You can find your reminder IDs using `/list-reminders`"
+            )
+            return
+
+        reminder_id = context.args[0]
+
+        try:
+            # Remove the reminder
+            success = await self.reminder_manager.remove_reminder(reminder_id, user_id)
+
+            if success:
+                success_message = (
+                    f"✅ **Reminder Removed Successfully!** 🎉\n\n"
+                    f"🆔 **Reminder ID:** {reminder_id}\n"
+                    f"👤 **Removed by:** {username}\n\n"
+                    f"The reminder has been removed and will no longer trigger."
+                )
+            else:
+                success_message = (
+                    f"❌ **Reminder Not Found**\n\n"
+                    f"🆔 **Reminder ID:** {reminder_id}\n"
+                    f"👤 **User:** {username}\n\n"
+                    f"Could not find the specified reminder. Please check the ID and try again."
+                )
+
+            await update.message.reply_text(success_message)
+            logger.info(f"User {username} removed reminder {reminder_id}")
+
+        except Exception as e:
+            error_message = f"❌ Error removing reminder: {str(e)}\n"
+            await update.message.reply_text(error_message)
+            logger.error(f"Error removing reminder for user {username}: {e}")
+
+    async def update_reminder_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /update-reminder command.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        if not context.args:
+            await update.message.reply_text(
+                "❌ Please provide a reminder ID and updates!\n"
+                "Usage: `/update-reminder <reminder_id> <field> <value>`\n"
+                "Examples:\n"
+                "  `/update-reminder rem_123 time 10:00`\n"
+                "  `/update-reminder rem_123 message New task message`\n"
+                "  `/update-reminder rem_123 days 0,2,4`\n"
+                "  `/update-reminder rem_123 recurring false"
+            )
+            return
+
+        reminder_id = context.args[0]
+
+        try:
+            # Parse updates
+            updates = {}
+            if len(context.args) > 1:
+                # Simple field-value parsing
+                for i in range(1, len(context.args), 2):
+                    if i + 1 < len(context.args):
+                        field = context.args[i].lower()
+                        value = context.args[i + 1]
+
+                        if field == 'days':
+                            try:
+                                updates[field] = [int(d.strip()) for d in value.split(',')]
+                            except ValueError:
+                                await update.message.reply_text(f"❌ Invalid days format: {value}")
+                                return
+                        elif field == 'recurring':
+                            updates[field] = value.lower() in ['true', 'yes', '1', 'on']
+                        else:
+                            updates[field] = value
+
+            # Update the reminder
+            success = await self.reminder_manager.update_reminder(reminder_id, updates, user_id)
+
+            if success:
+                success_message = (
+                    f"✅ **Reminder Updated Successfully!** 🎉\n\n"
+                    f"🆔 **Reminder ID:** {reminder_id}\n"
+                    f"👤 **Updated by:** {username}\n"
+                    f"📝 **Updates:** {updates}\n\n"
+                    f"The reminder has been updated successfully."
+                )
+            else:
+                success_message = (
+                    f"❌ **Reminder Not Found**\n\n"
+                    f"🆔 **Reminder ID:** {reminder_id}\n"
+                    f"👤 **User:** {username}\n\n"
+                    f"Could not find the specified reminder. Please check the ID and try again."
+                )
+
+            await update.message.reply_text(success_message)
+            logger.info(f"User {username} updated reminder {reminder_id}")
+
+        except Exception as e:
+            error_message = f"❌ Error updating reminder: {str(e)}\n"
+            await update.message.reply_text(error_message)
+            logger.error(f"Error updating reminder for user {username}: {e}")
+
+    async def trigger_reminder_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /trigger-reminder command.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        if not context.args:
+            await update.message.reply_text(
+                "❌ Please provide a reminder ID!\n"
+                "Usage: `/trigger-reminder <reminder_id>`\n"
+                "You can find your reminder IDs using `/list-reminders`"
+            )
+            return
+
+        reminder_id = context.args[0]
+
+        try:
+            # Trigger the reminder
+            success = await self.reminder_manager.trigger_reminder(reminder_id)
+
+            if success:
+                success_message = (
+                    f"✅ **Reminder Triggered Successfully!** 🎉\n\n"
+                    f"🆔 **Reminder ID:** {reminder_id}\n"
+                    f"👤 **Triggered by:** {username}\n\n"
+                    f"The reminder has been triggered immediately!"
+                )
+            else:
+                success_message = (
+                    f"❌ **Reminder Not Found**\n\n"
+                    f"🆔 **Reminder ID:** {reminder_id}\n"
+                    f"👤 **User:** {username}\n\n"
+                    f"Could not find the specified reminder. Please check the ID and try again."
+                )
+
+            await update.message.reply_text(success_message)
+            logger.info(f"User {username} triggered reminder {reminder_id}")
+
+        except Exception as e:
+            error_message = f"❌ Error triggering reminder: {str(e)}\n"
+            await update.message.reply_text(error_message)
+            logger.error(f"Error triggering reminder for user {username}: {e}")
+
     def _parse_time(self, time_str: str) -> Optional[datetime]:
         """
         Parse time string in HH:MM format.
@@ -571,6 +902,13 @@ class BinanceSquareBot:
         application.add_handler(CommandHandler("poll", self.poll_command))
         application.add_handler(CommandHandler("schedule", self.schedule_command))
         application.add_handler(CommandHandler("status", self.status_command))
+
+        # Add reminder command handlers
+        application.add_handler(CommandHandler("add-reminder", self.add_reminder_command))
+        application.add_handler(CommandHandler("list-reminders", self.list_reminders_command))
+        application.add_handler(CommandHandler("remove-reminder", self.remove_reminder_command))
+        application.add_handler(CommandHandler("update-reminder", self.update_reminder_command))
+        application.add_handler(CommandHandler("trigger-reminder", self.trigger_reminder_command))
 
         # Add callback query handler
         application.add_handler(CallbackQueryHandler(self.callback_query_handler))
