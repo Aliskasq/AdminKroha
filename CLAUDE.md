@@ -5,6 +5,7 @@ AdminKroha is an advanced Telegram bot for posting content to Binance Square. It
 
 **Repository:** https://github.com/Aliskasq/AdminKroha.git
 **Current directory:** /home/user/AdminKroha
+**Current version:** v2.1.1
 
 ## Key Configuration
 
@@ -12,7 +13,7 @@ AdminKroha is an advanced Telegram bot for posting content to Binance Square. It
 ```bash
 BOT_TOKEN=9110424893:AAGl1iaKkv3oU-Fof8JeUelK851DnQEdmuM
 TELEGRAM_GROUP_ID=-1004330664849
-BINANCE_API_KEY=b5fa5e41639a44df93afa7f29d069fe0
+BINANCE_API_KEY=970659384ec8406bbc3bfe20be90f765
 ADMIN_USER_ID=483687184
 LOG_LEVEL=INFO
 MAX_POST_LENGTH=1000
@@ -50,8 +51,8 @@ AdminKroha/
 │   ├── __init__.py
 │   ├── config.py           # Configuration management (dataclass Config)
 │   ├── bot.py              # Main bot logic with reminder system (RUSSIAN)
-│   ├── binance_api.py      # Binance Square API integration
-│   ├── content_generator.py # Content generation & formatting
+│   ├── binance_api.py      # Binance Square OpenAPI v1/v2 integration
+│   ├── content_generator.py # Content generation & formatting (preserves user content)
 │   ├── image_handler.py    # Image processing & upload
 │   ├── scheduler.py        # Post scheduling
 │   ├── logger.py           # Logging configuration
@@ -126,7 +127,7 @@ In `/etc/systemd/system/admin-kroha.service`:
 - `ExecStart=/path/to/venv_production/bin/python main.py`
 - `User=your_vps_user`
 
-## Key Fixes Applied (v2.1.0)
+## Key Fixes Applied (v2.1.1)
 
 1. **Created missing `src/config.py`** - Dataclass Config with load_from_env()
 2. **Fixed field order in Config** - Required fields first
@@ -134,11 +135,19 @@ In `/etc/systemd/system/admin-kroha.service`:
 4. **Installed missing `aiohttp`** dependency
 5. **Fixed .env parsing** - Removed inline comment from MAX_LOG_SIZE
 6. **FULL RUSSIAN TRANSLATION** - All 15+ commands messages in Russian
-7. **POST LINKS** - Bot returns link after publishing: https://www.binance.com/square/post/{id}
+7. **POST LINKS** - Bot returns link after publishing via shareLink API
 8. **GROUP ADMIN SUPPORT** - All commands check admin via Telegram API (not hardcoded ADMIN_USER_ID)
    - Added `is_group_admin()` - checks via getChatMember
    - Added `require_group_admin()` - unified check for all commands
    - Any group admin can use bot (not just hardcoded user)
+9. **FIXED BINANCE SQUARE API ENDPOINTS** - Now uses correct OpenAPI v1/v2:
+   - Text posts: `POST https://www.binance.com/bapi/composite/v1/public/pgc/openApi/content/add`
+   - Image upload: 4-step flow via v2 endpoints (presigned URL → PUT → poll → post)
+   - Required headers: `X-Square-OpenAPI-Key`, `clienttype: binanceSkill`
+   - Request format: `contentType=1`, `bodyTextOnly` (not `content`/`postType`)
+10. **FIXED CONTENT FORMATTING** - Preserves user content exactly per Binance guidelines:
+    - No auto hashtags, no timestamps, no "Tags:" prefix
+    - Hashtags (#topic) and cashtags ($coin) passed verbatim for backend parsing
 
 ## Important Notes
 
@@ -176,11 +185,15 @@ python3 -c "from src.config import Config; c=Config.load_from_env(); print(c.bot
 | Bot not responding | Check if added to group, verify TELEGRAM_GROUP_ID format (-100...) |
 | Permission denied | Run with correct user, check systemd service User= |
 | Python version | Use python3.11 on VPS, ensure venv uses correct python |
+| Binance API 403 | Use correct endpoints (www.binance.com/bapi/composite), add clienttype header |
 
 ## API Endpoints Used
-- Binance Square: `POST https://api.binance.com/square/api/v1/content`
-- Binance Square: `POST https://api.binance.com/square/api/v1/image`
-- Binance: `GET https://api.binance.com/api/v3/ticker/24hr`
+- Binance Square OpenAPI v1: `POST https://www.binance.com/bapi/composite/v1/public/pgc/openApi/content/add`
+- Binance Square OpenAPI v2 (images):
+  - `POST https://www.binance.com/bapi/composite/v2/public/pgc/openApi/image/presignedUrl`
+  - `PUT` to presigned URL
+  - `POST https://www.binance.com/bapi/composite/v2/public/pgc/openApi/image/imageStatus`
+- Binance Public: `GET https://api.binance.com/api/v3/ticker/24hr`
 - Telegram Bot API: Long polling via python-telegram-bot
 
 ## Development Notes
@@ -189,4 +202,5 @@ python3 -c "from src.config import Config; c=Config.load_from_env(); print(c.bot
 - Rate limit: 60 requests/minute
 - Max concurrent requests: 10
 - Post length limit: 1000 chars (Telegram max 4096)
-- Post link format: https://www.binance.com/square/post/{post_id}
+- Post link format: shareLink from API (https://app.binance.com/uni-qr/cpos/{id})
+- **Content preservation**: User text sent exactly as-is, Binance backend parses #hashtags and $cashtags
