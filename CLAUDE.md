@@ -5,7 +5,7 @@ AdminKroha is an advanced Telegram bot for posting content to Binance Square. It
 
 **Repository:** https://github.com/Aliskasq/AdminKroha.git
 **Current directory:** /home/user/AdminKroha
-**Current version:** v2.1.1
+**Current version:** v2.1.4
 
 ## Key Configuration
 
@@ -79,10 +79,8 @@ AdminKroha/
 ### Content
 - `/post <текст>` - Опубликовать текст в Binance Square
 - `/post_image <текст>` - Опубликовать с изображением (потом пришлите фото)
-- `/get_tickers <тики>` - Данные тикеров (BTCUSDT ETHUSDT SOLUSDT)
-- `/poll <вопрос> <варианты>` - Создать опрос
 - `/schedule <время> <текст>` - Запланировать пост
-- `/scheldue <время> <детали>` - Расширенное планирование с опросами/тикерами
+- `/scheldue <время> <детали>` - Расширенное планирование с тикерами/хештегами
 
 ### Reminders
 - `/add_reminder <тип> <время> [дни] [сообщение]` - Добавить напоминание
@@ -93,6 +91,10 @@ AdminKroha/
 - `/remove_reminder <id>` - Удалить напоминание
 - `/update_reminder <id> <поле> <значение>` - Обновить напоминание
 - `/trigger_reminder <id>` - Запустить немедленно
+
+### Removed Commands (Unsupported by Binance Square)
+- `/poll` — Binance Square OpenAPI does not support polls
+- `/get_tickers` — Removed (API issues, not core feature)
 
 ## Running the Bot
 
@@ -127,7 +129,7 @@ In `/etc/systemd/system/admin-kroha.service`:
 - `ExecStart=/path/to/venv_production/bin/python main.py`
 - `User=your_vps_user`
 
-## Key Fixes Applied (v2.1.1)
+## Key Fixes Applied (v2.1.4)
 
 1. **Created missing `src/config.py`** - Dataclass Config with load_from_env()
 2. **Fixed field order in Config** - Required fields first
@@ -148,6 +150,8 @@ In `/etc/systemd/system/admin-kroha.service`:
 10. **FIXED CONTENT FORMATTING** - Preserves user content exactly per Binance guidelines:
     - No auto hashtags, no timestamps, no "Tags:" prefix
     - Hashtags (#topic) and cashtags ($coin) passed verbatim for backend parsing
+11. **REMOVED MARKDOWN FORMATTING** - All bot responses are plain text (no **bold**, no `code`)
+12. **REMOVED UNSUPPORTED COMMANDS** - `/poll` and `/get_tickers` removed (Binance Square doesn't support)
 
 ## Important Notes
 
@@ -204,3 +208,4 @@ python3 -c "from src.config import Config; c=Config.load_from_env(); print(c.bot
 - Post length limit: 1000 chars (Telegram max 4096)
 - Post link format: shareLink from API (https://app.binance.com/uni-qr/cpos/{id})
 - **Content preservation**: User text sent exactly as-is, Binance backend parses #hashtags and $cashtags
+- **Plain text only**: No markdown formatting in any bot responses
