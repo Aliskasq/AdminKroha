@@ -82,6 +82,9 @@ htmlcov/
 .dmypy.json
 dmypy.ini
 
+# Claude Code local config
+CLAUDE.md
+
 # Notion интеграция
 NOTION_INTEGRATION_KEY
 NOTION_DATABASE_ID
