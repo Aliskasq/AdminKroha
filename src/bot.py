@@ -163,29 +163,27 @@ class BinanceSquareBot:
 
         welcome_message = (
             f"👋 Привет, {username}! Я — AdminKroha, улучшенный Telegram-бот для Binance Square! 🚀\n\n"
-            f"🎯 **Доступ:** Бот работает только в групповых чатах и супергруппах.\n\n"
-            f"📝 **Доступные команды:**\n"
+            f"🎯 Доступ: Бот работает только в групповых чатах и супергруппах.\n\n"
+            f"📝 Доступные команды:\n"
             f"• /help — Показать все команды\n"
             f"• /post <текст> — Опубликовать текст в Binance Square\n"
             f"• /post_image <текст> — Опубликовать с изображением\n"
             f"• /get_tickers <тики> — Получить данные тикеров\n"
-            f"• /poll <вопрос> <варианты> — Создать опрос\n"
             f"• /schedule <время> <текст> — Запланировать пост\n"
             f"• /scheldue <детали> — Расширенное планирование\n"
             f"• /add_reminder <тип> <время> [дни] [сообщение] — Добавить напоминание\n"
             f"• /list_reminders — Список напоминаний\n"
             f"• /status — Статус бота\n\n"
-            f"📊 **Возможности:**\n"
+            f"📊 Возможности:\n"
             f"• Поддержка хештегов в постах\n"
             f"• Данные тикеров в реальном времени с подсветкой $SYMBOL\n"
             f"• Загрузка и обработка изображений\n"
-            f"• Интерактивные опросы\n"
             f"• Планирование постов\n"
             f"• Расширенная система напоминаний\n\n"
-            f"🔧 **Команды для админов:**\n"
+            f"🔧 Команды для админов:\n"
             f"• /broadcast <текст> — Рассылка (только админ)\n"
             f"• /logs — Просмотр логов (только админ)\n\n"
-            f"⚠️ **Важно:** Бот ограничен групповыми чатами и администраторами для безопасности.\n\n"
+            f"⚠️ Важно: Бот ограничен групповыми чатами и администраторами для безопасности.\n\n"
             f"❓ Нужна помощь? Введите любую команду для начала!"
         )
 
@@ -209,40 +207,40 @@ class BinanceSquareBot:
 
         help_message = (
             f"👋 Привет, {username}! Полное руководство по AdminKroha! 📚\n\n"
-            f"📝 **ТЕКСТОВЫЕ ПОСТЫ:**\n"
+            f"📝 ТЕКСТОВЫЕ ПОСТЫ:\n"
             f"Используйте /post с текстом для публикации:\n"
-            f"  Пример: `/post BTC пробивает уровень #crypto #trading`\n\n"
-            f"🖼️ **ПОСТЫ С ИЗОБРАЖЕНИЕМ:**\n"
-            f"Шаг 1: `/post_image Анализ рынка`\n"
+            f"  Пример: /post BTC пробивает уровень #crypto #trading\n\n"
+            f"🖼️ ПОСТЫ С ИЗОБРАЖЕНИЕМ:\n"
+            f"Шаг 1: /post_image Анализ рынка\n"
             f"Шаг 2: Отправьте изображение боту\n\n"
-            f"📊 **ДАННЫЕ ТИКЕРОВ:**\n"
+            f"📊 ДАННЫЕ ТИКЕРОВ:\n"
             f"Получите курсы криптовалют с подсветкой $SYMBOL:\n"
-            f"  Пример: `/get_tickers $btc $eth $sol` или `/get_tickers BTCUSDT ETHUSDT SOLUSDT`\n\n"
-            f"⏰ **ПЛАНИРОВАНИЕ:**\n"
+            f"  Пример: /get_tickers $btc $eth $sol или /get_tickers BTCUSDT ETHUSDT SOLUSDT\n\n"
+            f"⏰ ПЛАНИРОВАНИЕ:\n"
             f"Отложите пост на будущее:\n"
-            f"  Пример: `/schedule 14:30 Анализ на завтра`\n\n"
-            f"🚀 **РАСШИРЕННОЕ ПЛАНИРОВАНИЕ (/scheldue):**\n"
+            f"  Пример: /schedule 14:30 Анализ на завтра\n\n"
+            f"🚀 РАСШИРЕННОЕ ПЛАНИРОВАНИЕ (/scheldue):\n"
             f"Пост с тикерами и хештегами:\n"
-            f"  Пример: `/scheldue 14:30 \"Анализ BTC\" $btc #crypto`\n\n"
-            f"🔔 **НАПОМИНАНИЯ:**\n"
+            f"  Пример: /scheldue 14:30 \"Анализ BTC\" $btc #crypto\n\n"
+            f"🔔 НАПОМИНАНИЯ:\n"
             f"Добавьте напоминание с временем и днями:\n"
-            f"  Пример: `/add_reminder task 09:00 Задачи 0,2,4`\n"
-            f"  Пример: `/add_reminder market 14:30 BTC $btc 0,1,2,3,4`\n\n"
-            f"🔧 **КОМАНДЫ АДМИНА:**\n"
+            f"  Пример: /add_reminder task 09:00 Задачи 0,2,4\n"
+            f"  Пример: /add_reminder market 14:30 BTC $btc 0,1,2,3,4\n\n"
+            f"🔧 КОМАНДЫ АДМИНА:\n"
             f"• /status — Статус и статистика бота\n"
             f"• /broadcast <текст> — Рассылка всем пользователям\n"
             f"• /logs — Просмотр недавних логов\n\n"
-            f"📈 **СТАТУС БОТА:**\n"
+            f"📈 СТАТУС БОТА:\n"
             f"• Онлайн и реагирует\n"
             f"• Подключен к Binance Square API\n"
             f"• Обработка постов: Активна\n"
             f"• Запланированных постов: {len(self.scheduled_posts)}\n\n"
-            f"🎯 **Советы:**\n"
+            f"🎯 Советы:\n"
             f"• Используйте хештеги (#crypto, #btc, #trading) для охвата\n"
             f"• Добавляйте $SYMBOL для авто-подсветки тикеров\n"
             f"• Планируйте посты в пиковые часы\n"
             f"• Напоминания для регулярных задач\n\n"
-            f"🔒 **Безопасность:** Бот работает только в группах и для админов.\n\n"
+            f"🔒 Безопасность: Бот работает только в группах и для админов.\n\n"
             f"❓ Нужна помощь? Введите любую команду!"
         )
 
@@ -267,10 +265,10 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Укажите детали для scheldue!\n"
-                "Использование: `/scheldue <время> <детали>`\n"
+                "Использование: /scheldue <время> <детали>\n"
                 "Примеры:\n"
-                "  `/scheldue 14:30 \"Вырастет BTC?\" Да Нет Возможно $btc`\n"
-                "  `/scheldue 09:00 \"Ежедневный анализ\" \"BTC: $45k\" #crypto`\n\n"
+                "  /scheldue 14:30 \"Вырастет BTC?\" Да Нет Возможно $btc\n"
+                "  /scheldue 09:00 \"Ежедневный анализ\" \"BTC: $45k\" #crypto\n\n"
                 "Детали могут содержать:\n"
                 "  • Вопрос для опроса: \"Вырастет BTC?\"\n"
                 "  • Варианты: Да Нет Возможно\n"
@@ -291,9 +289,9 @@ class BinanceSquareBot:
                 await update.message.reply_text(
                     "❌ Неверный формат scheldue!\n"
                     "Формат: [вопрос] [варианты] [тики] [хештеги] [контент]\n"
-                    "Пример: `/scheldue 14:30 \"Вырастет BTC?\" Да Нет $btc #crypto`\n"
-                    "Пример: `/scheldue 09:00 \"Анализ\" \"BTC: $45k\" #crypto`\n"
-                    "Пример: `/scheldue 14:30 \"Вырастет BTC?\" Да Нет $btc $eth`"
+                    "Пример: /scheldue 14:30 \"Вырастет BTC?\" Да Нет $btc #crypto\n"
+                    "Пример: /scheldue 09:00 \"Анализ\" \"BTC: $45k\" #crypto\n"
+                    "Пример: /scheldue 14:30 \"Вырастет BTC?\" Да Нет $btc $eth"
                 )
                 return
 
@@ -302,7 +300,7 @@ class BinanceSquareBot:
             if not scheduled_time:
                 await update.message.reply_text(
                     "❌ Неверный формат времени! Используйте ЧЧ:ММ (24 часа)\n"
-                    "Пример: `/scheldue 14:30 \"Вырастет BTC?\" Да Нет $btc`"
+                    "Пример: /scheldue 14:30 \"Вырастет BTC?\" Да Нет $btc"
                 )
                 return
 
@@ -315,14 +313,14 @@ class BinanceSquareBot:
             )
 
             success_message = (
-                f"🚀 **Scheldue пост запланирован успешно!** 🎉\n\n"
-                f"📝 **Вопрос:** {scheldue_data.get('question', 'N/A')}\n"
-                f"🗳️ **Варианты:** {', '.join(scheldue_data.get('options', []))}\n"
-                f"📊 **Тикеры:** {', '.join(scheldue_data.get('tickers', []))}\n"
-                f"🏷️ **Хештеги:** {', '.join(scheldue_data.get('hashtags', []))}\n"
-                f"⏰ **Время публикации:** {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"🆔 **Scheldue ID:** {post_id}\n"
-                f"👤 **Запланировал:** {username}\n\n"
+                f"🚀 Scheldue пост запланирован успешно! 🎉\n\n"
+                f"📝 Вопрос: {scheldue_data.get('question', 'N/A')}\n"
+                f"🗳️ Варианты: {', '.join(scheldue_data.get('options', []))}\n"
+                f"📊 Тикеры: {', '.join(scheldue_data.get('tickers', []))}\n"
+                f"🏷️ Хештеги: {', '.join(scheldue_data.get('hashtags', []))}\n"
+                f"⏰ Время публикации: {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"🆔 Scheldue ID: {post_id}\n"
+                f"👤 Запланировал: {username}\n\n"
                 f"Пост автоматически опубликуется с опросом, тикерами и хештегами!"
             )
 
@@ -376,18 +374,18 @@ class BinanceSquareBot:
 
         # Interactive scheldue creation
         await update.message.reply_text(
-            "🚀 **AdminKroha Scheldue Creator** 🚀\n\n"
+            "🚀 AdminKroha Scheldue Creator 🚀\n\n"
             "Создадим запланированный пост с опросами, тикерами и хештегами!\n\n"
-            "**Шаг 1:** Укажите время публикации (ЧЧ:ММ)\n"
-            "Пример: `14:30` для 14:30\n\n"
-            "**Шаг 2:** Укажите детали контента\n"
+            "Шаг 1: Укажите время публикации (ЧЧ:ММ)\n"
+            "Пример: 14:30 для 14:30\n\n"
+            "Шаг 2: Укажите детали контента\n"
             "Можно добавить:\n"
             "  • Вопрос: \"Вырастет BTC?\"\n"
             "  • Варианты: Да Нет Возможно\n"
             "  • Тикеры: $btc $eth $sol или BTCUSDT ETHUSDT\n"
             "  • Хештеги: #crypto #bitcoin\n"
             "  • Текст после вариантов\n\n"
-            "**Пример:** `14:30 \"Вырастет BTC?\" Да Нет $btc #crypto`\n\n"
+            "Пример: 14:30 \"Вырастет BTC?\" Да Нет $btc #crypto\n\n"
             "Введите время и детали:"
         )
 
@@ -421,17 +419,17 @@ class BinanceSquareBot:
                 await update.message.reply_text(
                     "❌ Invalid scheldue format!\n"
                     "Please provide details in format: [question] [options] [tickers] [hashtags] [content]\n"
-                    "Example: `\"Will BTC rise?\" Yes No Maybe $btc #crypto`\n"
-                    "Example: `\"Daily analysis\" \"BTC: $45k\" #crypto`\n"
+                    "Example: \"Will BTC rise?\" Yes No Maybe $btc #crypto\n"
+                    "Example: \"Daily analysis\" \"BTC: $45k\" #crypto\n"
                     "Please try again:"
                 )
                 return
 
             # Send interactive time input
             await update.message.reply_text(
-                "⏰ **Step 2:** Please provide the scheduled time (HH:MM format):\n"
-                "Example: `14:30` for 2:30 PM\n"
-                "Example: `09:00` for 9:00 AM\n"
+                "⏰ Step 2: Please provide the scheduled time (HH:MM format):\n"
+                "Example: 14:30 for 2:30 PM\n"
+                "Example: 09:00 for 9:00 AM\n"
                 "Please enter the time:"
             )
 
@@ -465,7 +463,7 @@ class BinanceSquareBot:
             if not scheduled_time:
                 await update.message.reply_text(
                     "❌ Invalid time format! Use HH:MM format (24 hours)\n"
-                    "Example: `14:30` for 2:30 PM\n"
+                    "Example: 14:30 for 2:30 PM\n"
                     "Please enter the time again:"
                 )
                 return
@@ -489,19 +487,19 @@ class BinanceSquareBot:
 
             # Send success message
             await update.message.reply_text(
-                f"✅ **Scheldue Post Scheduled Successfully!** 🎉\n\n"
-                f"📝 **Question:** {scheldue_data.get('question', 'N/A')}\n"
-                f"🗳️ **Options:** {', '.join(scheldue_data.get('options', []))}\n"
-                f"📊 **Tickers:** {', '.join(scheldue_data.get('tickers', []))}\n"
-                f"🏷️ **Hashtags:** {', '.join(scheldue_data.get('hashtags', []))}\n"
-                f"⏰ **Scheduled Time:** {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"🆔 **Scheldue ID:** {post_id}\n\n"
+                f"✅ Scheldue Post Scheduled Successfully! 🎉\n\n"
+                f"📝 Question: {scheldue_data.get('question', 'N/A')}\n"
+                f"🗳️ Options: {', '.join(scheldue_data.get('options', []))}\n"
+                f"📊 Tickers: {', '.join(scheldue_data.get('tickers', []))}\n"
+                f"🏷️ Hashtags: {', '.join(scheldue_data.get('hashtags', []))}\n"
+                f"⏰ Scheduled Time: {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"🆔 Scheldue ID: {post_id}\n\n"
                 f"This scheldue will be posted automatically with poll, tickers, and hashtags!\n\n"
-                f"📋 **Next steps:**\n"
-                f"• `/scheldue` - Create another scheldue\n"
-                f"• `/status` - Check bot status\n"
-                f"• `/list-reminders` - Manage reminders\n"
-                f"• `/help` - View all commands"
+                f"📋 Next steps:\n"
+                f"• /scheldue - Create another scheldue\n"
+                f"• /status - Check bot status\n"
+                f"• /list-reminders - Manage reminders\n"
+                f"• /help - View all commands"
             )
 
             logger.info(f"User {username} (ID: {user_id}) created scheldue post {post_id}")
@@ -531,7 +529,7 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Укажите контент для публикации!\n"
-                "Пример: `/post BTC пробивает уровень #crypto #trading`"
+                "Пример: /post BTC пробивает уровень #crypto #trading"
             )
             return
 
@@ -557,9 +555,9 @@ class BinanceSquareBot:
 
             success_message = (
                 f"✅ Пост успешно опубликован! 🎉\n\n"
-                f"📝 **Контент:**\n{formatted_content}\n\n"
-                f"🆔 **Post ID:** {post_id}\n"
-                f"🔗 **Ссылка на пост:** {share_link}"
+                f"📝 Контент:\n{formatted_content}\n\n"
+                f"🆔 Post ID: {post_id}\n"
+                f"🔗 Ссылка на пост: {share_link}"
             )
 
             await update.message.reply_text(success_message)
@@ -591,7 +589,7 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Укажите текст для поста с изображением!\n"
-                "Пример: `/post_image Анализ рынка сегодня`"
+                "Пример: /post_image Анализ рынка сегодня"
             )
             return
 
@@ -601,7 +599,7 @@ class BinanceSquareBot:
         # Inform user that we need to receive an image
         await update.message.reply_text(
             f"🖼️ Отправьте изображение для публикации с этим текстом:\n\n"
-            f"📝 **Текст:** {text_content}\n\n"
+            f"📝 Текст: {text_content}\n\n"
             f"После отправки фото я опубликую его в Binance Square!"
         )
 
@@ -627,7 +625,7 @@ class BinanceSquareBot:
         if user_id not in self.user_data or 'pending_image_post' not in self.user_data[user_id]:
             await update.message.reply_text(
                 "❌ Нет ожидающего поста с изображением!\n"
-                "Сначала используйте `/post_image <текст>`."
+                "Сначала используйте /post_image <текст>."
             )
             return
 
@@ -664,10 +662,10 @@ class BinanceSquareBot:
 
             success_message = (
                 f"✅ Пост с изображением опубликован! 🎉\n\n"
-                f"📝 **Текст:** {text_content}\n"
-                f"🖼️ **Изображение:** Опубликовано\n\n"
-                f"🆔 **Post ID:** {post_id}\n"
-                f"🔗 **Ссылка на пост:** {share_link}"
+                f"📝 Текст: {text_content}\n"
+                f"🖼️ Изображение: Опубликовано\n\n"
+                f"🆔 Post ID: {post_id}\n"
+                f"🔗 Ссылка на пост: {share_link}"
             )
 
             await update.message.reply_text(success_message)
@@ -703,7 +701,7 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Укажите тикеры!\n"
-                "Пример: `/get_tickers BTCUSDT ETHUSDT SOLUSDT`"
+                "Пример: /get_tickers BTCUSDT ETHUSDT SOLUSDT"
             )
             return
 
@@ -712,7 +710,7 @@ class BinanceSquareBot:
         if not tickers:
             await update.message.reply_text(
                 "❌ Укажите корректные тикеры, заканчивающиеся на USDT!\n"
-                "Пример: `/get_tickers BTCUSDT ETHUSDT SOLUSDT`"
+                "Пример: /get_tickers BTCUSDT ETHUSDT SOLUSDT"
             )
             return
 
@@ -723,11 +721,11 @@ class BinanceSquareBot:
             ticker_data = await self.binance_api.get_ticker_data(tickers)
 
             # Format the response
-            response = "📊 **Данные тикеров:**\n\n"
+            response = "📊 Данные тикеров:\n\n"
             for ticker, data in ticker_data.items():
                 change_indicator = "📈" if data.get('priceChangePercent', 0) >= 0 else "📉"
                 response += (
-                    f"{change_indicator} **{ticker}:** ${data.get('lastPrice', 'N/A')}\n"
+                    f"{change_indicator} {ticker}: ${data.get('lastPrice', 'N/A')}\n"
                     f"   24ч изменение: {data.get('priceChangePercent', 'N/A')}%\n"
                     f"   Макс: ${data.get('highPrice', 'N/A')}\n"
                     f"   Мин: ${data.get('lowPrice', 'N/A')}\n"
@@ -900,30 +898,30 @@ class BinanceSquareBot:
 
         # Add question
         if scheldue_data.get('question'):
-            content_parts.append(f"**{scheldue_data['question']}**\n")
+            content_parts.append(f"{scheldue_data['question']}\n")
 
         # Add options if present
         if scheldue_data.get('options'):
-            content_parts.append("\n🗳️ **Options:**\n")
+            content_parts.append("\n🗳️ Options:\n")
             for i, option in enumerate(scheldue_data['options'], 1):
                 content_parts.append(f"{i}. {option}")
 
         # Add ticker information
         if scheldue_data.get('tickers'):
-            content_parts.append("\n📊 **Market Data:**\n")
+            content_parts.append("\n📊 Market Data:\n")
             # Format tickers with prices
             for ticker in scheldue_data['tickers']:
                 content_parts.append(f"• ${ticker}")
 
         # Add hashtags
         if scheldue_data.get('hashtags'):
-            content_parts.append("\n🏷️ **Topics:**\n")
+            content_parts.append("\n🏷️ Topics:\n")
             for hashtag in scheldue_data['hashtags']:
                 content_parts.append(f"#{hashtag}")
 
         # Add regular content if present
         if scheldue_data.get('content') and scheldue_data['content'].strip():
-            content_parts.append(f"\n📝 **Additional Content:**\n{ scheldue_data['content'] }")
+            content_parts.append(f"\n📝 Additional Content:\n{ scheldue_data['content'] }")
 
         # Join all parts
         return "\n".join(content_parts)
@@ -959,17 +957,17 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Please provide scheldue details!\n"
-                "Usage: `/scheldue <time> <details>`\n"
+                "Usage: /scheldue <time> <details>\n"
                 "Examples:\n"
-                "  `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc`\n"
-                "  `/scheldue 09:00 \"Daily analysis\" \"BTC: $45k\" #crypto`\n\n"
+                "  /scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc\n"
+                "  /scheldue 09:00 \"Daily analysis\" \"BTC: $45k\" #crypto\n\n"
                 "Details can include:\n"
                 "  • Question for poll: \"Will BTC rise?\"\n"
                 "  • Options: Yes No Maybe\n"
                 "  • Tickers: $btc $eth $sol (with or without $)\n"
                 "  • Hashtags: #crypto #bitcoin\n"
                 "  • Content for regular post after options\n\n"
-                "For interactive scheldue creation, use: `/scheldue`"
+                "For interactive scheldue creation, use: /scheldue"
             )
             return
 
@@ -984,9 +982,9 @@ class BinanceSquareBot:
                 await update.message.reply_text(
                     "❌ Invalid scheldue format!\n"
                     "Please provide details in format: [question] [options] [tickers] [hashtags] [content]\n"
-                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc #crypto`\n"
-                    "Example: `/scheldue 09:00 \"Daily analysis\" \"BTC: $45k\" #crypto`\n"
-                    "Example: `/scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc $eth\""
+                    "Example: /scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc #crypto\n"
+                    "Example: /scheldue 09:00 \"Daily analysis\" \"BTC: $45k\" #crypto\n"
+                    "Example: /scheldue 14:30 \"Will BTC rise?\" Yes No Maybe $btc $eth"
                 )
                 return
 
@@ -995,7 +993,7 @@ class BinanceSquareBot:
             if not scheduled_time:
                 await update.message.reply_text(
                     "❌ Неверный формат времени! Используйте ЧЧ:ММ (24 часа)\n"
-                    "Пример: `/scheldue 14:30 \"Вырастет BTC?\" Да Нет $btc`"
+                    "Пример: /scheldue 14:30 \"Вырастет BTC?\" Да Нет $btc"
                 )
                 return
 
@@ -1008,19 +1006,19 @@ class BinanceSquareBot:
             )
 
             success_message = (
-                f"🚀 **Scheldue Post Scheduled Successfully!** 🎉\n\n"
-                f"📝 **Question:** {scheldue_data.get('question', 'N/A')}\n"
-                f"🗳️ **Options:** {', '.join(scheldue_data.get('options', []))}\n"
-                f"📊 **Tickers:** {', '.join(scheldue_data.get('tickers', []))}\n"
-                f"🏷️ **Hashtags:** {', '.join(scheldue_data.get('hashtags', []))}\n"
-                f"⏰ **Scheduled Time:** {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"🆔 **Scheldue ID:** {post_id}\n\n"
+                f"🚀 Scheldue Post Scheduled Successfully! 🎉\n\n"
+                f"📝 Question: {scheldue_data.get('question', 'N/A')}\n"
+                f"🗳️ Options: {', '.join(scheldue_data.get('options', []))}\n"
+                f"📊 Tickers: {', '.join(scheldue_data.get('tickers', []))}\n"
+                f"🏷️ Hashtags: {', '.join(scheldue_data.get('hashtags', []))}\n"
+                f"⏰ Scheduled Time: {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"🆔 Scheldue ID: {post_id}\n\n"
                 f"This scheldue will be posted automatically with poll, tickers, and hashtags!\n\n"
-                f"📋 **Next steps:**\n"
-                f"• `/scheldue` - Create another scheldue\n"
-                f"• `/status` - Check bot status\n"
-                f"• `/list-reminders` - Manage reminders\n"
-                f"• `/help` - View all commands"
+                f"📋 Next steps:\n"
+                f"• /scheldue - Create another scheldue\n"
+                f"• /status - Check bot status\n"
+                f"• /list-reminders - Manage reminders\n"
+                f"• /help - View all commands"
             )
 
             await update.message.reply_text(success_message)
@@ -1073,18 +1071,18 @@ class BinanceSquareBot:
 
         # Interactive scheldue creation
         await update.message.reply_text(
-            "🚀 **AdminKroha Scheldue Creator** 🚀\n\n"
+            "🚀 AdminKroha Scheldue Creator 🚀\n\n"
             "Создадим запланированный пост с опросами, тикерами и хештегами!\n\n"
-            "**Шаг 1:** Укажите время публикации (ЧЧ:ММ)\n"
-            "Пример: `14:30` для 14:30\n\n"
-            "**Шаг 2:** Укажите детали контента\n"
+            "Шаг 1: Укажите время публикации (ЧЧ:ММ)\n"
+            "Пример: 14:30 для 14:30\n\n"
+            "Шаг 2: Укажите детали контента\n"
             "Можно добавить:\n"
             "  • Вопрос: \"Вырастет BTC?\"\n"
             "  • Варианты: Да Нет Возможно\n"
             "  • Тикеры: $btc $eth $sol или BTCUSDT ETHUSDT\n"
             "  • Хештеги: #crypto #bitcoin\n"
             "  • Текст после вариантов\n\n"
-            "**Пример:** `14:30 \"Вырастет BTC?\" Да Нет $btc #crypto`\n\n"
+            "Пример: 14:30 \"Вырастет BTC?\" Да Нет $btc #crypto\n\n"
             "Введите время и детали:"
         )
 
@@ -1118,17 +1116,17 @@ class BinanceSquareBot:
                 await update.message.reply_text(
                     "❌ Invalid scheldue format!\n"
                     "Please provide details in format: [question] [options] [tickers] [hashtags] [content]\n"
-                    "Example: `\"Will BTC rise?\" Yes No Maybe $btc #crypto`\n"
-                    "Example: `\"Daily analysis\" \"BTC: $45k\" #crypto`\n"
+                    "Example: \"Will BTC rise?\" Yes No Maybe $btc #crypto\n"
+                    "Example: \"Daily analysis\" \"BTC: $45k\" #crypto\n"
                     "Please try again:"
                 )
                 return
 
             # Send interactive time input
             await update.message.reply_text(
-                "⏰ **Step 2:** Please provide the scheduled time (HH:MM format):\n"
-                "Example: `14:30` for 2:30 PM\n"
-                "Example: `09:00` for 9:00 AM\n"
+                "⏰ Step 2: Please provide the scheduled time (HH:MM format):\n"
+                "Example: 14:30 for 2:30 PM\n"
+                "Example: 09:00 for 9:00 AM\n"
                 "Please enter the time:"
             )
 
@@ -1162,7 +1160,7 @@ class BinanceSquareBot:
             if not scheduled_time:
                 await update.message.reply_text(
                     "❌ Invalid time format! Use HH:MM format (24 hours)\n"
-                    "Example: `14:30` for 2:30 PM\n"
+                    "Example: 14:30 for 2:30 PM\n"
                     "Please enter the time again:"
                 )
                 return
@@ -1186,19 +1184,19 @@ class BinanceSquareBot:
 
             # Send success message
             await update.message.reply_text(
-                f"✅ **Scheldue Post Scheduled Successfully!** 🎉\n\n"
-                f"📝 **Question:** {scheldue_data.get('question', 'N/A')}\n"
-                f"🗳️ **Options:** {', '.join(scheldue_data.get('options', []))}\n"
-                f"📊 **Tickers:** {', '.join(scheldue_data.get('tickers', []))}\n"
-                f"🏷️ **Hashtags:** {', '.join(scheldue_data.get('hashtags', []))}\n"
-                f"⏰ **Scheduled Time:** {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"🆔 **Scheldue ID:** {post_id}\n\n"
+                f"✅ Scheldue Post Scheduled Successfully! 🎉\n\n"
+                f"📝 Question: {scheldue_data.get('question', 'N/A')}\n"
+                f"🗳️ Options: {', '.join(scheldue_data.get('options', []))}\n"
+                f"📊 Tickers: {', '.join(scheldue_data.get('tickers', []))}\n"
+                f"🏷️ Hashtags: {', '.join(scheldue_data.get('hashtags', []))}\n"
+                f"⏰ Scheduled Time: {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"🆔 Scheldue ID: {post_id}\n\n"
                 f"This scheldue will be posted automatically with poll, tickers, and hashtags!\n\n"
-                f"📋 **Next steps:**\n"
-                f"• `/scheldue` - Create another scheldue\n"
-                f"• `/status` - Check bot status\n"
-                f"• `/list-reminders` - Manage reminders\n"
-                f"• `/help` - View all commands"
+                f"📋 Next steps:\n"
+                f"• /scheldue - Create another scheldue\n"
+                f"• /status - Check bot status\n"
+                f"• /list-reminders - Manage reminders\n"
+                f"• /help - View all commands"
             )
 
             logger.info(f"User {username} (ID: {user_id}) created scheldue post {post_id}")
@@ -1228,23 +1226,23 @@ class BinanceSquareBot:
         active_scheduled = len(self.scheduled_posts)
 
         status_message = (
-            f"📊 **Статус бота**\n\n"
-            f"🤖 **Информация о боте:**\n"
+            f"📊 Статус бота\n\n"
+            f"🤖 Информация о боте:\n"
             f"• Имя: Binance Square Telegram Bot\n"
             f"• Версия: 1.0.0\n"
             f"• Python: 3.8+\n\n"
-            f"👥 **Статистика пользователей:**\n"
+            f"👥 Статистика пользователей:\n"
             f"• Всего пользователей: {total_users}\n"
             f"• Всего команд: {total_commands}\n"
             f"• Команд на пользователя: {total_commands / max(total_users, 1):.1f}\n\n"
-            f"⏰ **Статистика бота:**\n"
+            f"⏰ Статистика бота:\n"
             f"• Статус: Онлайн ✅\n"
             f"• Время работы: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
             f"• Запланированных постов: {active_scheduled}\n\n"
-            f"🔗 **Статус API:**\n"
+            f"🔗 Статус API:\n"
             f"• Binance Square API: Подключен ✅\n"
             f"• Telegram API: Подключен ✅\n\n"
-            f"📝 **Недавняя активность:**\n"
+            f"📝 Недавняя активность:\n"
             f"• Последние 10 мин: Активно\n"
             f"• Ошибки за час: 0\n"
             f"• Успешные посты: Активно\n"
@@ -1271,7 +1269,7 @@ class BinanceSquareBot:
         if len(context.args) < 2:
             await update.message.reply_text(
                 "❌ Укажите время и контент!\n"
-                "Пример: `/schedule 14:30 Анализ на завтра`"
+                "Пример: /schedule 14:30 Анализ на завтра"
             )
             return
 
@@ -1284,7 +1282,7 @@ class BinanceSquareBot:
             if not scheduled_time:
                 await update.message.reply_text(
                     "❌ Неверный формат времени! Используйте ЧЧ:ММ (24 часа)\n"
-                    "Пример: `/schedule 14:30 Анализ на завтра`"
+                    "Пример: /schedule 14:30 Анализ на завтра"
                 )
                 return
 
@@ -1303,11 +1301,11 @@ class BinanceSquareBot:
             })
 
             success_message = (
-                f"⏰ **Пост запланирован успешно!** 🎉\n\n"
-                f"📝 **Контент:** {content}\n"
-                f"🕐 **Время публикации:** {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"🆔 **Post ID:** {post_id}\n"
-                f"👤 **Запланировал:** {username}\n\n"
+                f"⏰ Пост запланирован успешно! 🎉\n\n"
+                f"📝 Контент: {content}\n"
+                f"🕐 Время публикации: {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"🆔 Post ID: {post_id}\n"
+                f"👤 Запланировал: {username}\n\n"
                 f"Пост автоматически опубликуется в указанное время!"
             )
 
@@ -1337,11 +1335,11 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Укажите детали напоминания!\n"
-                "Использование: `/add_reminder <тип> <время> [дни] [сообщение]`\n"
+                "Использование: /add_reminder <тип> <время> [дни] [сообщение]\n"
                 "Примеры:\n"
-                "  `/add_reminder task 09:00 Проверить задачи`\n"
-                "  `/add_reminder market 14:30 Цена BTC #crypto`\n"
-                "  `/add_reminder analysis 19:00 Конец торговой сессии`\n\n"
+                "  /add_reminder task 09:00 Проверить задачи\n"
+                "  /add_reminder market 14:30 Цена BTC #crypto\n"
+                "  /add_reminder analysis 19:00 Конец торговой сессии\n\n"
                 "Типы: task, market, analysis, news, general"
             )
             return
@@ -1389,12 +1387,12 @@ class BinanceSquareBot:
                 days_display = 'Every day'
 
             success_message = (
-                f"✅ **Reminder Added Successfully!** 🎉\n\n"
-                f"🔔 **Type:** {reminder_type.title()}\n"
-                f"⏰ **Time:** {time}\n"
-                f"📅 **Days:** {days_display}\n"
-                f"💬 **Message:** {message}\n"
-                f"🆔 **Reminder ID:** {reminder_id}\n\n"
+                f"✅ Reminder Added Successfully! 🎉\n\n"
+                f"🔔 Type: {reminder_type.title()}\n"
+                f"⏰ Time: {time}\n"
+                f"📅 Days: {days_display}\n"
+                f"💬 Message: {message}\n"
+                f"🆔 Reminder ID: {reminder_id}\n\n"
                 f"The reminder will notify you at the specified time on the selected days!"
             )
 
@@ -1427,14 +1425,14 @@ class BinanceSquareBot:
 
             if not reminders:
                 await update.message.reply_text(
-                    "📭 **Напоминаний нет**\n\n"
+                    "📭 Напоминаний нет\n\n"
                     "У вас пока нет активных напоминаний.\n"
-                    "Используйте `/add_reminder` для создания первого!"
+                    "Используйте /add_reminder для создания первого!"
                 )
                 return
 
             # Format reminders list
-            reminders_list = "🔔 **Ваши напоминания:**\n\n"
+            reminders_list = "🔔 Ваши напоминания:\n\n"
 
             for reminder in reminders:
                 # Format days
@@ -1460,7 +1458,7 @@ class BinanceSquareBot:
                     next_time_str = 'Скоро'
 
                 reminders_list += (
-                    f"📌 **{reminder['reminder_type'].title()}**\n"
+                    f"📌 {reminder['reminder_type'].title()}\n"
                     f"   ⏰ Время: {reminder['time']} ({next_time_str})\n"
                     f"   📅 Дни: {days_display}\n"
                     f"   💬 Сообщение: {reminder['message']}\n"
@@ -1469,14 +1467,14 @@ class BinanceSquareBot:
 
             # Add some footer information
             reminders_list += (
-                f"📊 **Всего напоминаний:** {len(reminders)}\n"
-                f"🔄 **Повторяющихся:** {sum(1 for r in reminders if r.get('is_recurring', True))}\n"
-                f"📅 **На сегодня:** {len([r for r in reminders if r.get('is_due_today', lambda: False)()])}\n\n"
-                f"💡 **Команды:**\n"
-                f"  • `/add_reminder <тип> <время> [дни] [сообщение]` - Добавить\n"
-                f"  • `/remove_reminder <id>` - Удалить\n"
-                f"  • `/update_reminder <id> [обновления]` - Изменить\n"
-                f"  • `/trigger_reminder <id>` - Запустить сейчас\n"
+                f"📊 Всего напоминаний: {len(reminders)}\n"
+                f"🔄 Повторяющихся: {sum(1 for r in reminders if r.get('is_recurring', True))}\n"
+                f"📅 На сегодня: {len([r for r in reminders if r.get('is_due_today', lambda: False)()])}\n\n"
+                f"💡 Команды:\n"
+                f"  • /add_reminder <тип> <время> [дни] [сообщение] - Добавить\n"
+                f"  • /remove_reminder <id> - Удалить\n"
+                f"  • /update_reminder <id> [обновления] - Изменить\n"
+                f"  • /trigger_reminder <id> - Запустить сейчас\n"
             )
 
             await update.message.reply_text(reminders_list)
@@ -1505,8 +1503,8 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Укажите ID напоминания!\n"
-                "Использование: `/remove_reminder <id>`\n"
-                "ID можно узнать через `/list_reminders`"
+                "Использование: /remove_reminder <id>\n"
+                "ID можно узнать через /list_reminders"
             )
             return
 
@@ -1518,16 +1516,16 @@ class BinanceSquareBot:
 
             if success:
                 success_message = (
-                    f"✅ **Напоминание удалено!** 🎉\n\n"
-                    f"🆔 **ID:** {reminder_id}\n"
-                    f"👤 **Удалил:** {username}\n\n"
+                    f"✅ Напоминание удалено! 🎉\n\n"
+                    f"🆔 ID: {reminder_id}\n"
+                    f"👤 Удалил: {username}\n\n"
                     f"Напоминание больше не сработает."
                 )
             else:
                 success_message = (
-                    f"❌ **Напоминание не найдено**\n\n"
-                    f"🆔 **ID:** {reminder_id}\n"
-                    f"👤 **Пользователь:** {username}\n\n"
+                    f"❌ Напоминание не найдено\n\n"
+                    f"🆔 ID: {reminder_id}\n"
+                    f"👤 Пользователь: {username}\n\n"
                     f"Проверьте ID и попробуйте снова."
                 )
 
@@ -1557,12 +1555,12 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Укажите ID и изменения!\n"
-                "Использование: `/update_reminder <id> <поле> <значение>`\n"
+                "Использование: /update_reminder <id> <поле> <значение>\n"
                 "Примеры:\n"
-                "  `/update_reminder rem_123 time 10:00`\n"
-                "  `/update_reminder rem_123 message Новое сообщение`\n"
-                "  `/update_reminder rem_123 days 0,2,4`\n"
-                "  `/update_reminder rem_123 recurring false`"
+                "  /update_reminder rem_123 time 10:00\n"
+                "  /update_reminder rem_123 message Новое сообщение\n"
+                "  /update_reminder rem_123 days 0,2,4\n"
+                "  /update_reminder rem_123 recurring false"
             )
             return
 
@@ -1594,17 +1592,17 @@ class BinanceSquareBot:
 
             if success:
                 success_message = (
-                    f"✅ **Напоминание обновлено!** 🎉\n\n"
-                    f"🆔 **ID:** {reminder_id}\n"
-                    f"👤 **Обновил:** {username}\n"
-                    f"📝 **Изменения:** {updates}\n\n"
+                    f"✅ Напоминание обновлено! 🎉\n\n"
+                    f"🆔 ID: {reminder_id}\n"
+                    f"👤 Обновил: {username}\n"
+                    f"📝 Изменения: {updates}\n\n"
                     f"Напоминание успешно обновлено."
                 )
             else:
                 success_message = (
-                    f"❌ **Напоминание не найдено**\n\n"
-                    f"🆔 **ID:** {reminder_id}\n"
-                    f"👤 **Пользователь:** {username}\n\n"
+                    f"❌ Напоминание не найдено\n\n"
+                    f"🆔 ID: {reminder_id}\n"
+                    f"👤 Пользователь: {username}\n\n"
                     f"Проверьте ID и попробуйте снова."
                 )
 
@@ -1634,8 +1632,8 @@ class BinanceSquareBot:
         if not context.args:
             await update.message.reply_text(
                 "❌ Укажите ID напоминания!\n"
-                "Использование: `/trigger_reminder <id>`\n"
-                "ID можно узнать через `/list_reminders`"
+                "Использование: /trigger_reminder <id>\n"
+                "ID можно узнать через /list_reminders"
             )
             return
 
@@ -1647,16 +1645,16 @@ class BinanceSquareBot:
 
             if success:
                 success_message = (
-                    f"✅ **Напоминание запущено!** 🎉\n\n"
-                    f"🆔 **ID:** {reminder_id}\n"
-                    f"👤 **Запустил:** {username}\n\n"
+                    f"✅ Напоминание запущено! 🎉\n\n"
+                    f"🆔 ID: {reminder_id}\n"
+                    f"👤 Запустил: {username}\n\n"
                     f"Напоминание сработало немедленно!"
                 )
             else:
                 success_message = (
-                    f"❌ **Напоминание не найдено**\n\n"
-                    f"🆔 **ID:** {reminder_id}\n"
-                    f"👤 **Пользователь:** {username}\n\n"
+                    f"❌ Напоминание не найдено\n\n"
+                    f"🆔 ID: {reminder_id}\n"
+                    f"👤 Пользователь: {username}\n\n"
                     f"Проверьте ID и попробуйте снова."
                 )
 
