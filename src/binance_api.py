@@ -172,25 +172,37 @@ class BinanceSquareAPI:
         Args:
             content: Content text
             post_type: Type of post (text, image, article)
-            image_url: Single image URL (deprecated, use image_list)
-            image_list: List of image URLs (up to 4)
+            image_url: Single image URL (used as cover for articles)
+            image_list: List of image URLs (up to 4 for posts)
             tags: List of hashtags (not used in new API, embed in content)
             poll: Poll data (for polls)
 
         Returns:
             Response data from Binance API with post ID
         """
+        # Determine content type based on post_type
+        if post_type == 'article':
+            content_type = 2
+        else:
+            content_type = 1
+
         # Prepare request data for new API format
         data = {
-            'contentType': 1,  # 1 = short text post, 2 = long article
+            'contentType': content_type,
             'bodyTextOnly': content
         }
 
-        # Add images if provided
-        if image_list:
-            data['imageList'] = image_list[:4]  # Max 4 images
-        elif image_url:
-            data['imageList'] = [image_url]
+        # Add images based on post type
+        if post_type == 'article':
+            # Articles use cover image (single)
+            if image_url:
+                data['cover'] = image_url
+        else:
+            # Regular posts use imageList (up to 4)
+            if image_list:
+                data['imageList'] = image_list[:4]  # Max 4 images
+            elif image_url:
+                data['imageList'] = [image_url]
 
         try:
             response = await self._request(

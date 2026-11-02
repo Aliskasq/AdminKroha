@@ -637,7 +637,7 @@ class BinanceSquareBot:
 
     async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
-        Handle photo messages for image posts.
+        Handle photo messages for image posts and article covers.
         Supports single photos and media groups (albums).
 
         Args:
@@ -647,24 +647,37 @@ class BinanceSquareBot:
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
+        # Check if user explicitly requested article cover (cover_pending flag)
+        is_article_cover = (user_id in self.user_data and
+                           'pending_article' in self.user_data[user_id] and
+                           self.user_data[user_id].get('pending_article', {}).get('cover_pending', False))
+
         # Check if user has pending image post
-        if user_id not in self.user_data or 'pending_image_post' not in self.user_data[user_id]:
+        if not is_article_cover and (user_id not in self.user_data or 'pending_image_post' not in self.user_data[user_id]):
             await update.message.reply_text(
                 "❌ Нет ожидающего поста с изображением!\n"
                 "Сначала используйте /post_image <текст>."
             )
             return
 
-        text_content = self.user_data[user_id]['pending_image_post']
+        text_content = self.user_data[user_id].get('pending_image_post', '')
 
-        # Check if we already have 2 images
-        current_images = self.user_data[user_id].get('pending_images', [])
-        if len(current_images) >= 2:
-            await update.message.reply_text(
-                "❌ Максимум 2 изображения на пост!\n"
-                "Нажмите кнопку 'Отправить пост' для публикации."
-            )
-            return
+        # Check if we already have 2 images for regular post
+        if not is_article_cover:
+            current_images = self.user_data[user_id].get('pending_images', [])
+            if len(current_images) >= 2:
+                await update.message.reply_text(
+                    "❌ Максимум 2 изображения на пост!\n"
+                    "Нажмите кнопку 'Отправить пост' для публикации."
+                )
+                return
+
+        # For article cover, check if already has cover
+        if is_article_cover:
+            article = self.user_data[user_id]['pending_article']
+            if article.get('cover_url'):
+                await update.message.reply_text("❌ Обложка уже добавлена! Максимум 1.")
+                return
 
         try:
             # Get the image file (highest quality)
@@ -673,31 +686,72 @@ class BinanceSquareBot:
 
             # Upload image to Binance
             image_result = await self.image_handler.upload_image(image_bytes)
+            image_url = image_result['url']
 
-            # Add to pending images
-            if 'pending_images' not in self.user_data[user_id]:
-                self.user_data[user_id]['pending_images'] = []
-            self.user_data[user_id]['pending_images'].append(image_result['url'])
+            if is_article_cover:
+                # Store as article cover
+                self.user_data[user_id]['pending_article']['cover_url'] = image_url
+                self.user_data[user_id]['pending_article']['cover_pending'] = False
 
-            images_count = len(self.user_data[user_id]['pending_images'])
+                # Show updated article preview
+                article = self.user_data[user_id]['pending_article']
+                title = article.get('title', '')
+                content = article.get('content', '')
+                preview = content[:200] + '...' if len(content) > 200 else content
 
-            # Build keyboard based on number of images
-            if images_count == 1:
                 keyboard = [
-                    [InlineKeyboardButton("📸 Добавить ещё фото", callback_data='img_add')],
-                    [InlineKeyboardButton("✅ Отправить пост", callback_data='img_send')],
-                    [InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]
+                    [InlineKeyboardButton("📝 Добавить текст", callback_data='art_add_text')],
+                    [InlineKeyboardButton("✅ Отправить статью", callback_data='art_send')],
+                    [InlineKeyboardButton("❌ Отмена", callback_data='art_cancel')]
                 ]
-                message = f"📸 Изображение 1/2 получено.\n\nНажмите кнопку:"
-            else:  # images_count == 2
-                keyboard = [
-                    [InlineKeyboardButton("✅ Отправить пост", callback_data='img_send')],
-                    [InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]
-                ]
-                message = f"📸 Изображение 2/2 получено.\n\nНажмите 'Отправить пост' для публикации:"
+                reply_markup = InlineKeyboardMarkup(keyboard)
 
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(message, reply_markup=reply_markup)
+                await update.message.reply_text(
+                    f"🖼️ Обложка добавлена!\n\n"
+                    f"📋 Заголовок: {title}\n\n"
+                    f"📝 Текст ({len(content)} симв.):\n{preview}\n\n"
+                    f"🖼️ Обложка: ✅ загружена\n\n"
+                    f"Кнопки управления:",
+                    reply_markup=reply_markup
+                )
+                logger.info(f"User {username} added cover to article: {title}")
+            else:
+                # Regular post image handling
+                text_content = self.user_data[user_id]['pending_image_post']
+
+                # Check if we already have 2 images
+                current_images = self.user_data[user_id].get('pending_images', [])
+                if len(current_images) >= 2:
+                    await update.message.reply_text(
+                        "❌ Максимум 2 изображения на пост!\n"
+                        "Нажмите кнопку 'Отправить пост' для публикации."
+                    )
+                    return
+
+                # Add to pending images
+                if 'pending_images' not in self.user_data[user_id]:
+                    self.user_data[user_id]['pending_images'] = []
+                self.user_data[user_id]['pending_images'].append(image_url)
+
+                images_count = len(self.user_data[user_id]['pending_images'])
+
+                # Build keyboard based on number of images
+                if images_count == 1:
+                    keyboard = [
+                        [InlineKeyboardButton("📸 Добавить ещё фото", callback_data='img_add')],
+                        [InlineKeyboardButton("✅ Отправить пост", callback_data='img_send')],
+                        [InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]
+                    ]
+                    message = f"📸 Изображение 1/2 получено.\n\nНажмите кнопку:"
+                else:  # images_count == 2
+                    keyboard = [
+                        [InlineKeyboardButton("✅ Отправить пост", callback_data='img_send')],
+                        [InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]
+                    ]
+                    message = f"📸 Изображение 2/2 получено.\n\nНажмите 'Отправить пост' для публикации:"
+
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await update.message.reply_text(message, reply_markup=reply_markup)
 
         except Exception as e:
             error_message = f"❌ Ошибка загрузки изображения: {str(e)}\n"
@@ -823,6 +877,204 @@ class BinanceSquareBot:
             await query.edit_message_text("⏳ Публикую пост...")
             await self._publish_image_post(user_id, query.message.chat.id, context.bot)
             logger.info(f"User {username} confirmed and sent image post")
+
+    async def article_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /article command for creating long-form articles with cover image.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        # Ensure user data exists
+        self._ensure_user_data(user_id, username, update.effective_chat.id)
+
+        # Extract title and initial content preserving newlines
+        message_text = update.message.text or update.message.caption or ''
+        parts = message_text.split(' ', 1)
+        if len(parts) < 2:
+            await update.message.reply_text(
+                "❌ Укажите заголовок статьи!\n"
+                "Пример: /article Заголовок статьи\n\n"
+                "Потом пришлите текст (можно несколькими сообщениями),\n"
+                "а затем фото для обложки (опционально).\n"
+                "Кнопки: Добавить текст / Добавить обложку / Отправить / Отмена"
+            )
+            return
+
+        title = parts[1].strip()
+        self.user_data[user_id]['commands_used'] += 1
+
+        # Store article data
+        self.user_data[user_id]['pending_article'] = {
+            'title': title,
+            'content': '',
+            'cover_url': None
+        }
+        self.user_data[user_id]['pending_images'] = []
+
+        # Send initial message with inline keyboard
+        keyboard = [
+            [InlineKeyboardButton("📝 Добавить текст", callback_data='art_add_text')],
+            [InlineKeyboardButton("🖼️ Добавить обложку", callback_data='art_add_cover')],
+            [InlineKeyboardButton("✅ Отправить статью", callback_data='art_send')],
+            [InlineKeyboardButton("❌ Отмена", callback_data='art_cancel')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(
+            f"📰 Создание статьи\n\n"
+            f"📋 Заголовок: {title}\n\n"
+            f"Пришлите текст сообщениями (будет склеиваться).\n"
+            f"Можете прислать фото для обложки.\n\n"
+            f"Кнопки управления:",
+            reply_markup=reply_markup
+        )
+
+        logger.info(f"User {username} started article creation: {title}")
+
+    async def handle_article_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle callback queries for article post buttons.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        query = update.callback_query
+        await query.answer()
+
+        user_id = query.from_user.id
+        username = query.from_user.username or query.from_user.first_name
+        callback_data = query.data
+
+        # Check if user has pending article
+        if user_id not in self.user_data or 'pending_article' not in self.user_data[user_id]:
+            await query.edit_message_text("❌ Сессия истекла. Используйте /article заново.")
+            return
+
+        article = self.user_data[user_id]['pending_article']
+        title = article.get('title', '')
+        content = article.get('content', '')
+        cover_url = article.get('cover_url')
+
+        if callback_data == 'art_cancel':
+            # Cancel the article
+            self.user_data[user_id].pop('pending_article', None)
+            self.user_data[user_id].pop('pending_images', None)
+            await query.edit_message_text("❌ Создание статьи отменено.")
+            logger.info(f"User {username} cancelled article creation")
+
+        elif callback_data == 'art_add_text':
+            await query.edit_message_text(
+                f"📝 Добавление текста к статье\n\n"
+                f"📋 Заголовок: {title}\n\n"
+                f"Пришлите текст сообщением (будет добавлен к концу статьи).\n"
+                f"Можете прислать несколько сообщений подряд."
+            )
+            logger.info(f"User {username} requested to add text to article")
+
+        elif callback_data == 'art_add_cover':
+            # Check if cover already exists
+            article = self.user_data[user_id]['pending_article']
+            if article.get('cover_url'):
+                await query.edit_message_text("❌ Обложка уже добавлена! Максимум 1.")
+                return
+
+            # Set flag to indicate next photo is for article cover
+            self.user_data[user_id]['pending_article']['cover_pending'] = True
+
+            await query.edit_message_text(
+                f"🖼️ Добавление обложки к статье\n\n"
+                f"📋 Заголовок: {title}\n\n"
+                f"Пришлите фото для обложки (максимум 1)."
+            )
+            logger.info(f"User {username} requested to add cover to article")
+
+        elif callback_data == 'art_send':
+            # User confirmed - publish the article
+            if not article.get('content', '').strip():
+                await query.edit_message_text("❌ Текст статьи пуст! Добавьте текст перед отправкой.")
+                return
+
+            # Publish the article
+            await query.edit_message_text("⏳ Публикую статью...")
+            await self._publish_article_post(user_id, query.message.chat.id, context.bot)
+            logger.info(f"User {username} confirmed and sent article")
+
+    async def _publish_article_post(self, user_id: int, chat_id: int, bot) -> None:
+        """
+        Publish the collected article to Binance Square.
+
+        Args:
+            user_id: Telegram user ID
+            chat_id: Telegram chat ID
+            bot: Bot instance for sending messages
+        """
+        if user_id not in self.user_data or 'pending_article' not in self.user_data[user_id]:
+            return
+
+        article = self.user_data[user_id]['pending_article']
+        title = article.get('title', '')
+        content = article.get('content', '')
+        cover_url = article.get('cover_url')
+
+        if not content.strip():
+            await bot.send_message(chat_id=chat_id, text="❌ Текст статьи пуст!")
+            return
+
+        username = self.user_data[user_id].get('username', 'Unknown')
+
+        try:
+            # Prepare article content - Binance article format
+            formatted_content = self.content_generator.generate_content(
+                content,
+                post_type='article'
+            )
+
+            # Post to Binance Square as article (contentType=2)
+            post_result = await self.binance_api.post_content(
+                formatted_content,
+                post_type='article',
+                image_url=cover_url  # Will be sent as cover
+            )
+
+            # Clear pending state
+            self.user_data[user_id].pop('pending_article', None)
+            self.user_data[user_id].pop('pending_images', None)
+
+            # Extract post ID and link
+            post_id = post_result.get('data', {}).get('id', 'N/A')
+            share_link = post_result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
+
+            success_message = (
+                f"✅ Статья опубликована! 🎉\n\n"
+                f"📋 Заголовок: {title}\n"
+                f"🖼️ Обложка: {'Да' if cover_url else 'Нет'}\n\n"
+                f"🆔 Post ID: {post_id}\n"
+                f"🔗 Ссылка на статью: {share_link}"
+            )
+
+            # Send success message to the chat
+            await bot.send_message(chat_id=chat_id, text=success_message)
+
+            logger.info(f"User {username} posted article to Binance Square: {title}")
+
+        except Exception as e:
+            error_message = f"❌ Ошибка публикации статьи: {str(e)}\n"
+            await bot.send_message(chat_id=chat_id, text=error_message)
+            logger.error(f"Error posting article for user {username}: {e}")
+
+            # Clean up on error
+            self.user_data[user_id].pop('pending_article', None)
+            self.user_data[user_id].pop('pending_images', None)
 
     async def _parse_scheldue_details(self, details: str) -> Optional[Dict[str, Any]]:
         """
@@ -1291,6 +1543,63 @@ class BinanceSquareBot:
         except Exception as e:
             await update.message.reply_text(f"❌ Error scheduling scheldue: {e}")
             logger.error(f"Error scheduling scheldue for user {user_id}: {e}")
+
+    async def article_text_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle text messages for article content accumulation.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        # Check if user is in article creation process
+        if user_id not in self.user_data or 'pending_article' not in self.user_data[user_id]:
+            return
+
+        article = self.user_data[user_id]['pending_article']
+
+        # Get the text content preserving newlines
+        text = update.message.text or update.message.caption or ''
+        if not text.strip():
+            return
+
+        # Append to existing content
+        if article.get('content'):
+            article['content'] += '\n\n' + text
+        else:
+            article['content'] = text
+
+        # Update stored article
+        self.user_data[user_id]['pending_article'] = article
+
+        # Show current content preview (first 200 chars)
+        preview = article['content'][:200]
+        if len(article['content']) > 200:
+            preview += '...'
+
+        cover_status = '🖼️ Обложка: есть' if article.get('cover_url') else '🖼️ Обложки: нет'
+
+        keyboard = [
+            [InlineKeyboardButton("📝 Добавить текст", callback_data='art_add_text')],
+            [InlineKeyboardButton("🖼️ Добавить обложку", callback_data='art_add_cover')],
+            [InlineKeyboardButton("✅ Отправить статью", callback_data='art_send')],
+            [InlineKeyboardButton("❌ Отмена", callback_data='art_cancel')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(
+            f"📝 Текст добавлен к статье\n\n"
+            f"📋 Заголовок: {article.get('title', '')}\n\n"
+            f"📝 Текст ({len(article['content'])} симв.):\n{preview}\n\n"
+            f"{cover_status}\n\n"
+            f"Кнопки управления:",
+            reply_markup=reply_markup
+        )
+
+        logger.info(f"User {username} added text to article ({len(text)} chars)")
 
     async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -1792,6 +2101,8 @@ class BinanceSquareBot:
         application.add_handler(CommandHandler("help", self.help_command))
         application.add_handler(CommandHandler("post", self.post_command))
         application.add_handler(CommandHandler("post_image", self.post_image_command))
+        application.add_handler(CommandHandler("image", self.post_image_command))  # Alias
+        application.add_handler(CommandHandler("article", self.article_command))
         application.add_handler(CommandHandler("schedule", self.schedule_command))
         application.add_handler(CommandHandler("status", self.status_command))
 
@@ -1806,6 +2117,10 @@ class BinanceSquareBot:
         # Add message handler for photos
         application.add_handler(MessageHandler(filters.PHOTO, self.handle_photo))
         application.add_handler(CallbackQueryHandler(self.handle_image_callback, pattern='^img_'))
+        application.add_handler(CallbackQueryHandler(self.handle_article_callback, pattern='^art_'))
+
+        # Add article text handler
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.article_text_handler))
 
         # Add scheldue command handlers
         application.add_handler(CommandHandler("scheldue", self.scheldue_command))
