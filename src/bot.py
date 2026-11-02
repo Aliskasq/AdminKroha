@@ -39,6 +39,7 @@ class BinanceSquareBot:
         self.binance_api = BinanceSquareAPI(config)
         self.content_generator = ContentGenerator()
         self.image_handler = ImageHandler()
+        self.image_handler.set_binance_api(self.binance_api)
         self.scheduler = PostScheduler(config, self.binance_api)
         self.reminder_manager = ReminderManager(config)
 
@@ -85,6 +86,17 @@ class BinanceSquareBot:
             return member.status in ['administrator', 'creator']
         except Exception as e:
             logger.error(f"Error checking admin status: {e}")
+            # Fallback: check against ADMIN_USER_ID from config
+            admin_user_id = getattr(self.config, 'admin_user_id', None)
+            if admin_user_id:
+                try:
+                    admin_id = int(admin_user_id)
+                    user_id = update.effective_user.id
+                    if user_id == admin_id:
+                        logger.warning(f"Fallback to ADMIN_USER_ID check: user {user_id} is admin")
+                        return True
+                except (ValueError, TypeError):
+                    pass
             return False
 
     async def is_admin_in_configured_group(self, user_id: int) -> bool:
@@ -258,7 +270,10 @@ class BinanceSquareBot:
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
-        if not context.args:
+        # Extract details preserving newlines
+        message_text = update.message.text or update.message.caption or ''
+        parts = message_text.split(' ', 2)
+        if len(parts) < 3:
             await update.message.reply_text(
                 "❌ Укажите детали для scheldue!\n"
                 "Использование: /scheldue <время> <детали>\n"
@@ -274,8 +289,8 @@ class BinanceSquareBot:
             )
             return
 
-        time_str = context.args[0]
-        details = ' '.join(context.args[1:])
+        time_str = parts[1]
+        details = parts[2]  # Preserve newlines in details
 
         try:
             # Parse scheldue details
@@ -522,14 +537,17 @@ class BinanceSquareBot:
         # Ensure user data exists
         self._ensure_user_data(user_id, username, update.effective_chat.id)
 
-        if not context.args:
+        # Extract text content preserving newlines - use raw message text
+        message_text = update.message.text or update.message.caption or ''
+        parts = message_text.split(' ', 1)
+        if len(parts) < 2:
             await update.message.reply_text(
                 "❌ Укажите контент для публикации!\n"
                 "Пример: /post BTC пробивает уровень #crypto #trading"
             )
             return
 
-        content = ' '.join(context.args)
+        content = parts[1]  # Everything after the command, preserving newlines
         self.user_data[user_id]['commands_used'] += 1
 
         try:
@@ -582,33 +600,45 @@ class BinanceSquareBot:
         # Ensure user data exists
         self._ensure_user_data(user_id, username, update.effective_chat.id)
 
-        if not context.args:
+        # Extract text content preserving newlines - use raw message text
+        message_text = update.message.text or update.message.caption or ''
+        # Remove the command part (/post_image or /post_image@botname)
+        parts = message_text.split(' ', 1)
+        if len(parts) < 2:
             await update.message.reply_text(
                 "❌ Укажите текст для поста с изображением!\n"
                 "Пример: /post_image Анализ рынка сегодня"
             )
             return
 
-        text_content = ' '.join(context.args)
+        text_content = parts[1]  # Everything after the command, preserving newlines
         self.user_data[user_id]['commands_used'] += 1
 
-        # Inform user that we need to receive an image
-        await update.message.reply_text(
-            f"🖼️ Отправьте изображение для публикации с этим текстом:\n\n"
-            f"📝 Текст: {text_content}\n\n"
-            f"После отправки фото я опубликую его в Binance Square!"
-        )
-
-        # Store the content in user data for the next message
+        # Store the content in user data for the next messages
         if user_id not in self.user_data:
             self.user_data[user_id] = {}
         self.user_data[user_id]['pending_image_post'] = text_content
+        self.user_data[user_id]['pending_images'] = []  # List to collect image URLs
+
+        # Send initial message with inline keyboard
+        keyboard = [
+            [InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(
+            f"🖼️ Отправьте 1-2 изображения для публикации с этим текстом:\n\n"
+            f"📝 Текст: {text_content}\n\n"
+            f"Можете отправить альбом или по одному фото.",
+            reply_markup=reply_markup
+        )
 
         logger.info(f"User {username} started image post with content: {text_content}")
 
     async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle photo messages for image posts.
+        Supports single photos and media groups (albums).
 
         Args:
             update: Telegram update object
@@ -627,54 +657,172 @@ class BinanceSquareBot:
 
         text_content = self.user_data[user_id]['pending_image_post']
 
+        # Check if we already have 2 images
+        current_images = self.user_data[user_id].get('pending_images', [])
+        if len(current_images) >= 2:
+            await update.message.reply_text(
+                "❌ Максимум 2 изображения на пост!\n"
+                "Нажмите кнопку 'Отправить пост' для публикации."
+            )
+            return
+
         try:
-            # Get the image file
+            # Get the image file (highest quality)
             photo_file = await update.message.photo[-1].get_file()
             image_bytes = await photo_file.download_as_bytearray()
 
             # Upload image to Binance
             image_result = await self.image_handler.upload_image(image_bytes)
 
-            # Generate content with image
+            # Add to pending images
+            if 'pending_images' not in self.user_data[user_id]:
+                self.user_data[user_id]['pending_images'] = []
+            self.user_data[user_id]['pending_images'].append(image_result['url'])
+
+            images_count = len(self.user_data[user_id]['pending_images'])
+
+            # Build keyboard based on number of images
+            if images_count == 1:
+                keyboard = [
+                    [InlineKeyboardButton("📸 Добавить ещё фото", callback_data='img_add')],
+                    [InlineKeyboardButton("✅ Отправить пост", callback_data='img_send')],
+                    [InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]
+                ]
+                message = f"📸 Изображение 1/2 получено.\n\nНажмите кнопку:"
+            else:  # images_count == 2
+                keyboard = [
+                    [InlineKeyboardButton("✅ Отправить пост", callback_data='img_send')],
+                    [InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]
+                ]
+                message = f"📸 Изображение 2/2 получено.\n\nНажмите 'Отправить пост' для публикации:"
+
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(message, reply_markup=reply_markup)
+
+        except Exception as e:
+            error_message = f"❌ Ошибка загрузки изображения: {str(e)}\n"
+            await update.message.reply_text(error_message)
+            logger.error(f"Error uploading image for user {username}: {e}")
+
+    async def _publish_image_post(self, user_id: int, chat_id: int, bot) -> None:
+        """
+        Publish the collected image post.
+
+        Args:
+            user_id: Telegram user ID
+            chat_id: Telegram chat ID
+            bot: Bot instance for sending messages
+        """
+        if user_id not in self.user_data:
+            return
+
+        text_content = self.user_data[user_id].get('pending_image_post', '')
+        images = self.user_data[user_id].get('pending_images', [])
+
+        if not images:
+            return
+
+        # Get username for logging
+        username = self.user_data[user_id].get('username', 'Unknown')
+
+        try:
+            # Prepare content with image list
             formatted_content = self.content_generator.generate_content(
                 text_content,
-                post_type='image',
-                image_url=image_result['url']
+                post_type='image'
             )
 
-            # Post to Binance Square
+            # Post to Binance Square with all images
             post_result = await self.binance_api.post_content(
                 formatted_content,
                 post_type='image',
-                image_url=image_result['url']
+                image_list=images[:2]  # Max 2 images
             )
 
             # Clear pending state
-            del self.user_data[user_id]['pending_image_post']
+            self.user_data[user_id].pop('pending_image_post', None)
+            self.user_data[user_id].pop('pending_images', None)
 
-            # Extract post ID and link from new API response format
+            # Extract post ID and link
             post_id = post_result.get('data', {}).get('id', 'N/A')
             share_link = post_result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
 
             success_message = (
-                f"✅ Пост с изображением опубликован! 🎉\n\n"
+                f"✅ Пост с {len(images)} изображением(ями) опубликован! 🎉\n\n"
                 f"📝 Текст: {text_content}\n"
-                f"🖼️ Изображение: Опубликовано\n\n"
+                f"🖼️ Изображений: {len(images)}\n\n"
                 f"🆔 Post ID: {post_id}\n"
                 f"🔗 Ссылка на пост: {share_link}"
             )
 
-            await update.message.reply_text(success_message)
+            # Send success message to the chat
+            await bot.send_message(chat_id=chat_id, text=success_message)
+
             logger.info(f"User {username} posted image content to Binance Square: {text_content[:50]}...")
 
         except Exception as e:
-            error_message = f"❌ Ошибка публикации с изображением: {str(e)}\n"
-            await update.message.reply_text(error_message)
+            error_message = f"❌ Ошибка публикации: {str(e)}\n"
+            await bot.send_message(chat_id=chat_id, text=error_message)
             logger.error(f"Error posting image content for user {username}: {e}")
 
-            # Clear pending state on error
-            if user_id in self.user_data and 'pending_image_post' in self.user_data[user_id]:
-                del self.user_data[user_id]['pending_image_post']
+            # Clean up on error
+            self.user_data[user_id].pop('pending_image_post', None)
+            self.user_data[user_id].pop('pending_images', None)
+
+    async def handle_image_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle callback queries for image post buttons.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        query = update.callback_query
+        await query.answer()
+
+        user_id = query.from_user.id
+        username = query.from_user.username or query.from_user.first_name
+        callback_data = query.data
+
+        # Check if user has pending image post
+        if user_id not in self.user_data or 'pending_image_post' not in self.user_data[user_id]:
+            await query.edit_message_text("❌ Сессия истекла. Используйте /post_image заново.")
+            return
+
+        text_content = self.user_data[user_id].get('pending_image_post', '')
+        images = self.user_data[user_id].get('pending_images', [])
+
+        if callback_data == 'img_cancel':
+            # Cancel the image post
+            self.user_data[user_id].pop('pending_image_post', None)
+            self.user_data[user_id].pop('pending_images', None)
+            await query.edit_message_text("❌ Публикация отменена.")
+            logger.info(f"User {username} cancelled image post")
+
+        elif callback_data == 'img_add':
+            # User wants to add another photo
+            images_count = len(self.user_data[user_id].get('pending_images', []))
+            if images_count >= 2:
+                await query.edit_message_text("❌ Максимум 2 изображения на пост!")
+                return
+
+            await query.edit_message_text(
+                f"📸 Изображение {images_count}/2 получено.\n\n"
+                f"Пришлите ещё одно фото для добавления."
+            )
+            logger.info(f"User {username} requested to add another image")
+
+        elif callback_data == 'img_send':
+            # User confirmed - publish the post
+            images = self.user_data[user_id].get('pending_images', [])
+            if not images:
+                await query.edit_message_text("❌ Нет изображений для отправки!")
+                return
+
+            # Publish the post
+            await query.edit_message_text("⏳ Публикую пост...")
+            await self._publish_image_post(user_id, query.message.chat.id, context.bot)
+            logger.info(f"User {username} confirmed and sent image post")
 
     async def _parse_scheldue_details(self, details: str) -> Optional[Dict[str, Any]]:
         """
@@ -890,7 +1038,10 @@ class BinanceSquareBot:
             logger.warning(f"User {username} (ID: {user_id}) tried to use scheldue without admin permissions")
             return
 
-        if not context.args:
+        # Extract details preserving newlines
+        message_text = update.message.text or update.message.caption or ''
+        parts = message_text.split(' ', 2)
+        if len(parts) < 3:
             await update.message.reply_text(
                 "❌ Please provide scheldue details!\n"
                 "Usage: /scheldue <time> <details>\n"
@@ -907,8 +1058,8 @@ class BinanceSquareBot:
             )
             return
 
-        time_str = context.args[0]
-        details = ' '.join(context.args[1:])
+        time_str = parts[1]
+        details = parts[2]  # Preserve newlines in details
 
         try:
             # Parse scheldue details
@@ -1202,15 +1353,18 @@ class BinanceSquareBot:
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
 
-        if len(context.args) < 2:
+        # Extract content preserving newlines
+        message_text = update.message.text or update.message.caption or ''
+        parts = message_text.split(' ', 2)  # Split into 3 parts: /schedule, time, content
+        if len(parts) < 3:
             await update.message.reply_text(
                 "❌ Укажите время и контент!\n"
                 "Пример: /schedule 14:30 Анализ на завтра"
             )
             return
 
-        time_str = context.args[0]
-        content = ' '.join(context.args[1:])
+        time_str = parts[1]
+        content = parts[2]  # Preserve newlines in content
 
         try:
             # Parse time
@@ -1651,6 +1805,7 @@ class BinanceSquareBot:
         
         # Add message handler for photos
         application.add_handler(MessageHandler(filters.PHOTO, self.handle_photo))
+        application.add_handler(CallbackQueryHandler(self.handle_image_callback, pattern='^img_'))
 
         # Add scheldue command handlers
         application.add_handler(CommandHandler("scheldue", self.scheldue_command))
