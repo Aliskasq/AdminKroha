@@ -35,10 +35,6 @@ class Config:
     max_memory_usage: int = 512
     max_concurrent_requests: int = 10
 
-    # Security Configuration
-    enable_csrf_protection: bool = True
-    secret_key: str = "your_secret_key_here"
-
     # Additional Settings
     environment: str = "production"
     debug: bool = False
@@ -98,8 +94,6 @@ class Config:
             default_post_type=os.getenv("DEFAULT_POST_TYPE", "text"),
             max_memory_usage=int(os.getenv("MAX_MEMORY_USAGE", "512")),
             max_concurrent_requests=int(os.getenv("MAX_CONCURRENT_REQUESTS", "10")),
-            enable_csrf_protection=os.getenv("ENABLE_CSRF_PROTECTION", "true").lower() == "true",
-            secret_key=os.getenv("SECRET_KEY", "your_secret_key_here"),
             environment=os.getenv("ENVIRONMENT", "production"),
             debug=os.getenv("DEBUG", "false").lower() == "true",
             log_file=os.getenv("LOG_FILE", "bot.log"),
@@ -143,9 +137,6 @@ class Config:
 
         if not self.allowed_hashtags_list:
             warnings.append("ALLOWED_HASHTAGS is empty")
-
-        if self.secret_key == "your_secret_key_here":
-            warnings.append("SECRET_KEY is using default value - change it in production")
 
         return warnings
 
