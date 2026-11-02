@@ -8,6 +8,7 @@ and content scheduling.
 
 import logging
 import asyncio
+import re
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 
@@ -217,15 +218,12 @@ class BinanceSquareBot:
             f"📊 **ДАННЫЕ ТИКЕРОВ:**\n"
             f"Получите курсы криптовалют с подсветкой $SYMBOL:\n"
             f"  Пример: `/get_tickers $btc $eth $sol` или `/get_tickers BTCUSDT ETHUSDT SOLUSDT`\n\n"
-            f"🗳️ **ОПРОСЫ:**\n"
-            f"Создайте опрос с вариантами:\n"
-            f"  Пример: `/poll Куда пойдёт BTC? Вверх Вниз Бок`\n\n"
             f"⏰ **ПЛАНИРОВАНИЕ:**\n"
             f"Отложите пост на будущее:\n"
             f"  Пример: `/schedule 14:30 Анализ на завтра`\n\n"
             f"🚀 **РАСШИРЕННОЕ ПЛАНИРОВАНИЕ (/scheldue):**\n"
-            f"Пост с опросом, тикерами и хештегами:\n"
-            f"  Пример: `/scheldue 14:30 \"Вопрос?\" Да Нет $btc #crypto`\n\n"
+            f"Пост с тикерами и хештегами:\n"
+            f"  Пример: `/scheldue 14:30 \"Анализ BTC\" $btc #crypto`\n\n"
             f"🔔 **НАПОМИНАНИЯ:**\n"
             f"Добавьте напоминание с временем и днями:\n"
             f"  Пример: `/add_reminder task 09:00 Задачи 0,2,4`\n"
@@ -243,7 +241,6 @@ class BinanceSquareBot:
             f"• Используйте хештеги (#crypto, #btc, #trading) для охвата\n"
             f"• Добавляйте $SYMBOL для авто-подсветки тикеров\n"
             f"• Планируйте посты в пиковые часы\n"
-            f"• Опросы вовлекают аудиторию\n"
             f"• Напоминания для регулярных задач\n\n"
             f"🔒 **Безопасность:** Бот работает только в группах и для админов.\n\n"
             f"❓ Нужна помощь? Введите любую команду!"
@@ -1210,92 +1207,6 @@ class BinanceSquareBot:
             await update.message.reply_text(f"❌ Error scheduling scheldue: {e}")
             logger.error(f"Error scheduling scheldue for user {user_id}: {e}")
 
-    async def poll_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """
-        Handle /poll command.
-
-        Args:
-            update: Telegram update object
-            context: Bot context
-        """
-        # Check if user is group admin
-        if not await self.require_group_admin(update, context):
-            return
-
-        user_id = update.effective_user.id
-        username = update.effective_user.username or update.effective_user.first_name
-
-        # Ensure user data exists
-        self._ensure_user_data(user_id, username, update.effective_chat.id)
-
-        if len(context.args) < 3:
-            await update.message.reply_text(
-                "❌ Укажите вопрос и минимум 2 варианта!\n"
-                "Пример: `/poll Куда пойдёт BTC? Вверх Вниз Бок`"
-            )
-            return
-
-        question = context.args[0]
-        options = context.args[1:]
-
-        if len(options) < 2:
-            await update.message.reply_text(
-                "❌ Нужно минимум 2 варианта для опроса!\n"
-                "Пример: `/poll Куда пойдёт BTC? Вверх Вниз Бок`"
-            )
-            return
-
-        self.user_data[user_id]['commands_used'] += 1
-
-        try:
-            # Create inline keyboard for poll options
-            keyboard = []
-            for i, option in enumerate(options):
-                keyboard.append([InlineKeyboardButton(option, callback_data=f'poll_{i}')])
-
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            poll_message = (
-                f"🗳️ **Опрос создан!**\n\n"
-                f"**Вопрос:** {question}\n\n"
-                f"**Варианты:**\n"
-            )
-
-            for i, option in enumerate(options):
-                poll_message += f"{i + 1}. {option}\n"
-
-            poll_message += f"\nГолосуйте, нажимая на варианты выше!"
-
-            await update.message.reply_text(poll_message, reply_markup=reply_markup)
-            logger.info(f"User {username} created a poll: {question[:50]}...")
-
-        except Exception as e:
-            error_message = f"❌ Error creating poll: {str(e)}\n"
-            await update.message.reply_text(error_message)
-            logger.error(f"Error creating poll for user {username}: {e}")
-
-    async def callback_query_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """
-        Handle callback queries for polls.
-
-        Args:
-            update: Telegram update object
-            context: Bot context
-        """
-        query = update.callback_query
-        user_id = query.from_user.id
-        username = query.from_user.username or query.from_user.first_name
-        callback_data = query.data
-
-        if callback_data.startswith('poll_'):
-            option_index = int(callback_data.split('_')[1])
-
-            # Here you would typically store the vote and update poll results
-            # For this example, we'll just acknowledge the vote
-
-            await query.answer(f"Вы проголосовали за вариант {option_index + 1}!")
-            logger.info(f"User {username} voted for option {option_index + 1}")
-
     async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle /status command.
@@ -1794,7 +1705,6 @@ class BinanceSquareBot:
         application.add_handler(CommandHandler("post", self.post_command))
         application.add_handler(CommandHandler("post_image", self.post_image_command))
         application.add_handler(CommandHandler("get_tickers", self.get_tickers_command))
-        application.add_handler(CommandHandler("poll", self.poll_command))
         application.add_handler(CommandHandler("schedule", self.schedule_command))
         application.add_handler(CommandHandler("status", self.status_command))
 
@@ -1805,9 +1715,7 @@ class BinanceSquareBot:
         application.add_handler(CommandHandler("update_reminder", self.update_reminder_command))
         application.add_handler(CommandHandler("trigger_reminder", self.trigger_reminder_command))
 
-        # Add callback query handler
-        application.add_handler(CallbackQueryHandler(self.callback_query_handler))
-
+        
         # Add message handler for photos
         application.add_handler(MessageHandler(filters.PHOTO, self.handle_photo))
 
