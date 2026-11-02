@@ -113,7 +113,7 @@ python3 install.py
 # • Настройка переменных окружения
 ```
 
-### Способ 2: Ручная установка
+### Способ 2: Ручная установка (для VPS с root)
 
 ```bash
 # 1. Клонировать
@@ -127,16 +127,35 @@ python3 --version  # должен быть 3.11+
 python3 -m venv venv_production
 source venv_production/bin/activate
 
-# 4. Установить зависимости
+# 4. Установить зависимости (включая aiohttp)
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install aiohttp
 
 # 5. Настроить .env
 cp configs/.env.example .env
-# Отредактируйте .env с вашими ключами (см. ниже)
+nano .env
+# Вставьте свои ключи (см. ниже)
 
-# 6. Создать директории
-mkdir -p logs data configs systemd docs tests backups cache
+# 6. Проверить конфиг
+python3 -c "from src.config import Config; c=Config.load_from_env(); print('✅ Config OK:', c.bot_token[:10] + '...')"
+```
+
+### Быстрый деплой на VPS (одной командой)
+
+```bash
+# На чистом VPS (Ubuntu/Debian) как root:
+apt update && apt install -y python3.11 python3.11-venv git && \
+cd /root && git clone https://github.com/Aliskasq/AdminKroha.git && \
+cd AdminKroha && \
+python3.11 -m venv venv_production && \
+venv_production/bin/pip install --upgrade pip && \
+venv_production/bin/pip install -r requirements.txt && \
+venv_production/bin/pip install aiohttp && \
+cp systemd/admin-kroha.service /etc/systemd/system/ && \
+systemctl daemon-reload && \
+systemctl enable admin-kroha && \
+echo "Теперь отредактируйте .env и запустите: systemctl start admin-kroha"
 ```
 
 ### Настройка .env (обязательно!)
@@ -152,10 +171,10 @@ TELEGRAM_GROUP_ID=-100xxxxxxxxxx
 # Binance Square API Key (один ключ для постов)
 BINANCE_API_KEY=ваш_ключ_binance
 
-# Опционально: ID админа (для некоторых функций)
+# Опционально: ID админа (fallback если API проверка упадёт)
 ADMIN_USER_ID=123456789
 
-# Настройки бота
+# Настройки бота (не меняйте если не знаете зачем)
 LOG_LEVEL=INFO
 MAX_POST_LENGTH=1000
 RATE_LIMIT=60
@@ -163,32 +182,43 @@ ENABLE_SCHEDULED_POSTS=true
 ENABLE_AUTO_REPLIES=true
 ALLOWED_HASHTAGS=#crypto,#btc,#eth,#trading,#binance,#square
 DEFAULT_POST_TYPE=text
+MAX_MEMORY_USAGE=512
+MAX_CONCURRENT_REQUESTS=10
+ENVIRONMENT=production
+DEBUG=false
+LOG_FILE=bot.log
+MAX_LOG_SIZE=10485760
+BACKUP_LOG_COUNT=5
 ```
 
-### Настройка Systemd (для production)
+> ⚠️ **Никаких комментариев `#` в конце строк!** Особенно у `MAX_LOG_SIZE` — ломает парсинг.
+
+### Настройка Systemd (для production, root на VPS)
+
+Сервис в `systemd/admin-kroha.service` уже настроен для **root** в `/root/AdminKroha`.
 
 ```bash
 # Скопировать сервис
-sudo cp systemd/admin-kroha.service /etc/systemd/system/
-
-# ВАЖНО: Отредактировать пути в сервисе под ваш сервер!
-# WorkingDirectory=/путь/к/AdminKroha
-# ExecStart=/путь/к/venv_production/bin/python main.py
-# User=ваш_пользователь
+cp systemd/admin-kroha.service /etc/systemd/system/
 
 # Перезагрузить systemd
-sudo systemctl daemon-reload
+systemctl daemon-reload
 
 # Включить автозапуск и стартовать
-sudo systemctl enable admin-kroha
-sudo systemctl start admin-kroha
+systemctl enable admin-kroha
+systemctl start admin-kroha
 
 # Проверить статус
-sudo systemctl status admin-kroha
+systemctl status admin-kroha
 
-# Логи
-sudo journalctl -u admin-kroha -f
+# Логи в реальном времени
+journalctl -u admin-kroha -f
 ```
+
+> Если не root — отредактируйте `/etc/systemd/system/admin-kroha.service`:
+> - `User=ваш_юзер`
+> - `WorkingDirectory=/home/ваш_юзер/AdminKroha`
+> - `ExecStart=/home/ваш_юзер/AdminKroha/venv_production/bin/python /home/ваш_юзер/AdminKroha/main.py`
 
 ## 🚀 Быстрый старт
 
@@ -331,13 +361,34 @@ class Config:
 ### Бот не отвечает
 ```bash
 # 1. Проверить статус
-sudo systemctl status admin-kroha
+systemctl status admin-kroha
 
 # 2. Логи
-sudo journalctl -u admin-kroha --since "1 hour ago"
+journalctl -u admin-kroha --since "1 hour ago"
 
 # 3. Перезапуск
-sudo systemctl restart admin-kroha
+systemctl restart admin-kroha
+```
+
+### ModuleNotFoundError: aiohttp
+```bash
+# Установить в venv
+venv_production/bin/pip install aiohttp
+systemctl restart admin-kroha
+```
+
+### Unit admin-kroha.service could not be found
+```bash
+# Сервис не скопирован
+cp systemd/admin-kroha.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable admin-kroha
+```
+
+### Permission denied /root/AdminKroha
+```bash
+# Запускаете не от root — смените User/WorkingDirectory в сервисе
+# или запустите от root
 ```
 
 ### Неверные API ключи
@@ -389,7 +440,22 @@ MIT License. См. `LICENSE`.
 
 ## 🔄 Changelog
 
-### v2.1.1 (Current)
+### v2.1.6 (Current)
+- ✅ **Статьи с обложкой** — `/article` (contentType=2), inline-кнопки
+- ✅ **`/image` алиас** для `/post_image`
+- ✅ **Systemd unit** обновлён под root на VPS (/root/AdminKroha)
+- ✅ **aiohttp** добавлен в зависимости
+- ✅ Убраны неиспользуемые `SECRET_KEY`, `ENABLE_CSRF_PROTECTION`
+- ✅ Исправлен `.env.example` (без комментария в MAX_LOG_SIZE)
+- ✅ Полная инструкция деплоя на VPS в README
+
+### v2.1.5
+- ✅ Многофото (до 2) с inline-кнопками
+- ✅ Сохранение пустых строк (zero-width space)
+- ✅ Сохранение переносов строк во всех командах
+- ✅ Реальная загрузка фото в Binance (4 шага)
+
+### v2.1.1
 - ✅ Исправлены Binance Square API эндпоинты (www.binance.com/bapi/composite)
 - ✅ Правильный формат запросов: contentType=1, bodyTextOnly
 - ✅ 4-шаговая загрузка изображений (presigned URL → PUT → poll → post)

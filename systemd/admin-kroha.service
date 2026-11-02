@@ -5,53 +5,29 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=user
-Group=user
-WorkingDirectory=/home/user/projects/AdminKroha
+User=root
+Group=root
+WorkingDirectory=/root/AdminKroha
 
-# Environment variables
 Environment=PYTHONUNBUFFERED=1
-Environment=PYTHONPATH=/home/user/projects/AdminKroha/src
+Environment=PYTHONPATH=/root/AdminKroha/src
 Environment=LOG_LEVEL=INFO
-Environment=ADMIN_USER_ID=${ADMIN_USER_ID:-}
+Environment=VIRTUAL_ENV=/root/AdminKroha/venv_production
+Environment=PATH=/root/AdminKroha/venv_production/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# Python virtual environment path (update as needed)
-Environment=VIRTUAL_ENV=/home/user/projects/AdminKroha/venv_production
-Environment=PATH=/home/user/projects/AdminKroha/venv_production/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/root/AdminKroha/venv_production/bin/python /root/AdminKroha/main.py
 
-# Main bot command
-ExecStart=/home/user/projects/AdminKroha/venv_production/bin/python3 /home/user/projects/AdminKroha/main.py
-
-# Restart policy
 Restart=on-failure
 RestartSec=10
 StartLimitInterval=300
 StartLimitBurst=5
 
-# Resource limits
 LimitNOFILE=65536
 LimitNPROC=4096
 
-# Logging configuration
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=admin-kroha
 
-# Security settings
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ReadWritePaths=/home/user/projects/AdminKroha/logs /home/user/projects/AdminKroha/data /home/user/projects/AdminKroha/backups
-ProtectHome=true
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
-
-# Timeout settings
-TimeoutStartSec=60
-TimeoutStopSec=30
-
 [Install]
 WantedBy=multi-user.target
-WantedBy=graphical-session.target
-Alias=admin-kroha.service
