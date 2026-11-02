@@ -11,10 +11,10 @@ AdminKroha is an advanced Telegram bot for posting content to Binance Square. It
 
 ### Environment Variables (.env)
 ```bash
-BOT_TOKEN=9110424893:AAGl1iaKkv3oU-Fof8JeUelK851DnQEdmuM
-TELEGRAM_GROUP_ID=-1004330664849
-BINANCE_API_KEY=970659384ec8406bbc3bfe20be90f765
-ADMIN_USER_ID=483687184
+BOT_TOKEN=your_bot_token_here          # Get from @BotFather
+TELEGRAM_GROUP_ID=-100xxxxxxxxxx       # Your group ID (format: -100...)
+BINANCE_API_KEY=your_binance_api_key   # From Binance Square Creator Center
+ADMIN_USER_ID=123456789                # Your Telegram user ID (optional)
 LOG_LEVEL=INFO
 MAX_POST_LENGTH=1000
 RATE_LIMIT=60
@@ -32,6 +32,8 @@ LOG_FILE=bot.log
 MAX_LOG_SIZE=10485760
 BACKUP_LOG_COUNT=5
 ```
+
+> ⚠️ **NEVER commit real credentials to GitHub!** Use `.env` file (gitignored) for actual values.
 
 ### Required Dependencies
 - Python 3.11+ (tested on 3.14.4, but target VPS uses 3.11)
