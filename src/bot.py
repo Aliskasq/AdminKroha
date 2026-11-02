@@ -168,7 +168,6 @@ class BinanceSquareBot:
             f"• /help — Показать все команды\n"
             f"• /post <текст> — Опубликовать текст в Binance Square\n"
             f"• /post_image <текст> — Опубликовать с изображением\n"
-            f"• /get_tickers <тики> — Получить данные тикеров\n"
             f"• /schedule <время> <текст> — Запланировать пост\n"
             f"• /scheldue <детали> — Расширенное планирование\n"
             f"• /add_reminder <тип> <время> [дни] [сообщение] — Добавить напоминание\n"
@@ -213,9 +212,6 @@ class BinanceSquareBot:
             f"🖼️ ПОСТЫ С ИЗОБРАЖЕНИЕМ:\n"
             f"Шаг 1: /post_image Анализ рынка\n"
             f"Шаг 2: Отправьте изображение боту\n\n"
-            f"📊 ДАННЫЕ ТИКЕРОВ:\n"
-            f"Получите курсы криптовалют с подсветкой $SYMBOL:\n"
-            f"  Пример: /get_tickers $btc $eth $sol или /get_tickers BTCUSDT ETHUSDT SOLUSDT\n\n"
             f"⏰ ПЛАНИРОВАНИЕ:\n"
             f"Отложите пост на будущее:\n"
             f"  Пример: /schedule 14:30 Анализ на завтра\n\n"
@@ -679,66 +675,6 @@ class BinanceSquareBot:
             # Clear pending state on error
             if user_id in self.user_data and 'pending_image_post' in self.user_data[user_id]:
                 del self.user_data[user_id]['pending_image_post']
-
-    async def get_tickers_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """
-        Handle /get_tickers command.
-
-        Args:
-            update: Telegram update object
-            context: Bot context
-        """
-        # Check if user is group admin
-        if not await self.require_group_admin(update, context):
-            return
-
-        user_id = update.effective_user.id
-        username = update.effective_user.username or update.effective_user.first_name
-
-        # Ensure user data exists
-        self._ensure_user_data(user_id, username, update.effective_chat.id)
-
-        if not context.args:
-            await update.message.reply_text(
-                "❌ Укажите тикеры!\n"
-                "Пример: /get_tickers BTCUSDT ETHUSDT SOLUSDT"
-            )
-            return
-
-        tickers = [arg.upper() for arg in context.args if arg.upper().endswith('USDT')]
-
-        if not tickers:
-            await update.message.reply_text(
-                "❌ Укажите корректные тикеры, заканчивающиеся на USDT!\n"
-                "Пример: /get_tickers BTCUSDT ETHUSDT SOLUSDT"
-            )
-            return
-
-        self.user_data[user_id]['commands_used'] += 1
-
-        try:
-            # Get ticker data from Binance
-            ticker_data = await self.binance_api.get_ticker_data(tickers)
-
-            # Format the response
-            response = "📊 Данные тикеров:\n\n"
-            for ticker, data in ticker_data.items():
-                change_indicator = "📈" if data.get('priceChangePercent', 0) >= 0 else "📉"
-                response += (
-                    f"{change_indicator} {ticker}: ${data.get('lastPrice', 'N/A')}\n"
-                    f"   24ч изменение: {data.get('priceChangePercent', 'N/A')}%\n"
-                    f"   Макс: ${data.get('highPrice', 'N/A')}\n"
-                    f"   Мин: ${data.get('lowPrice', 'N/A')}\n"
-                    f"   Объём: {data.get('volume', 'N/A')}\n\n"
-                )
-
-            await update.message.reply_text(response)
-            logger.info(f"User {username} requested ticker data for {len(tickers)} symbols")
-
-        except Exception as e:
-            error_message = f"❌ Ошибка получения тикеров: {str(e)}\n"
-            await update.message.reply_text(error_message)
-            logger.error(f"Error getting ticker data for user {username}: {e}")
 
     async def _parse_scheldue_details(self, details: str) -> Optional[Dict[str, Any]]:
         """
@@ -1702,7 +1638,6 @@ class BinanceSquareBot:
         application.add_handler(CommandHandler("help", self.help_command))
         application.add_handler(CommandHandler("post", self.post_command))
         application.add_handler(CommandHandler("post_image", self.post_image_command))
-        application.add_handler(CommandHandler("get_tickers", self.get_tickers_command))
         application.add_handler(CommandHandler("schedule", self.schedule_command))
         application.add_handler(CommandHandler("status", self.status_command))
 

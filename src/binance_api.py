@@ -351,60 +351,6 @@ class BinanceSquareAPI:
         # Post content with image
         return await self.post_content(content, image_list=[image_url])
 
-    async def get_ticker_data(
-        self,
-        symbols: List[str]
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        Get cryptocurrency ticker data from Binance.
-
-        Args:
-            symbols: List of ticker symbols (e.g., ['BTCUSDT', 'ETHUSDT'])
-
-        Returns:
-            Dictionary of ticker data
-        """
-        try:
-            params = {'symbols': symbols}
-            response = await self._request(
-                'GET',
-                f'{self.base_url}/api/v3/ticker/24hr',
-                params=params,
-                headers={'X-Square-OpenAPI-Key': ''}  # Public endpoint, no auth needed
-            )
-
-            # Process and format the ticker data
-            ticker_data = {}
-            for item in response:
-                symbol = item.get('symbol')
-                if symbol in symbols:
-                    ticker_data[symbol] = {
-                        'symbol': symbol,
-                        'price': float(item.get('lastPrice', 0)),
-                        'change24h': float(item.get('priceChangePercent', 0)),
-                        'high24h': float(item.get('highPrice', 0)),
-                        'low24h': float(item.get('lowPrice', 0)),
-                        'volume': float(item.get('volume', 0)),
-                        'quoteVolume': float(item.get('quoteVolume', 0)),
-                        'openPrice': float(item.get('openPrice', 0)),
-                        'prevClosePrice': float(item.get('prevClosePrice', 0)),
-                        'count': int(item.get('count', 0)),
-                        'weightAvgPrice': float(item.get('weightAvgPrice', 0)),
-                        'askPrice': float(item.get('askPrice', 0)),
-                        'askQty': float(item.get('askQty', 0)),
-                        'bidPrice': float(item.get('bidPrice', 0)),
-                        'bidQty': float(item.get('bidQty', 0)),
-                        'timestamp': int(item.get('time', 0)),
-                        'datetime': datetime.fromtimestamp(item.get('time', 0) / 1000).isoformat()
-                    }
-
-            logger.info(f"Retrieved ticker data for {len(ticker_data)} symbols")
-            return ticker_data
-
-        except Exception as e:
-            logger.error(f"Failed to get ticker data: {e}")
-            raise
-
     async def create_poll(
         self,
         question: str,
