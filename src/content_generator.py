@@ -53,10 +53,11 @@ class ContentGenerator:
         # Start with base content - preserve user content exactly as per Binance API guidelines
         formatted_content = content.strip()
 
-        # Add image indicator if applicable (only for image posts)
-        if post_type == 'image' and image_url:
-            formatted_content += f"\n🖼️ Image: {image_url}"
+        # Preserve empty lines (paragraph breaks) by adding zero-width space
+        # Binance Square collapses empty lines, so we add zero-width space to preserve them
+        formatted_content = self._preserve_empty_lines(formatted_content)
 
+        # Do NOT add image URL to text - Binance API handles images via imageList parameter
         # Add ticker analysis if explicitly enabled
         if add_ticker_analysis:
             tickers = self._extract_tickers(content)
@@ -68,6 +69,28 @@ class ContentGenerator:
         # Do NOT add timestamp - Binance handles post time
 
         return formatted_content
+
+    def _preserve_empty_lines(self, text: str) -> str:
+        """
+        Preserve empty lines (paragraph breaks) by adding zero-width space.
+        Binance Square collapses consecutive newlines, so we add
+        zero-width space (U+200B) to lines that would otherwise be empty.
+
+        Args:
+            text: Input text with potential empty lines
+
+        Returns:
+            Text with zero-width spaces added to empty lines
+        """
+        lines = text.split('\n')
+        preserved_lines = []
+        for line in lines:
+            if line.strip() == '':
+                # Empty line - add zero-width space to preserve it
+                preserved_lines.append('​')
+            else:
+                preserved_lines.append(line)
+        return '\n'.join(preserved_lines)
 
     def _extract_and_format_hashtags(self, content: str) -> str:
         """

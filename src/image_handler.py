@@ -2,17 +2,22 @@
 Image handling for Telegram Binance Bot.
 
 This module handles image downloading, processing, and uploading for posts.
+Uses Binance Square OpenAPI v2 for real image upload (4-step flow).
 """
 
+import asyncio
 import base64
 import io
 import logging
-from typing import Dict, Any, Optional, Tuple
-from PIL import Image, ImageDraw, ImageFont
 import hashlib
 from datetime import datetime
+from typing import Dict, Any, Optional, Tuple
+from PIL import Image, ImageDraw, ImageFont
+
+import aiohttp
 
 from .config import Config
+from .binance_api import BinanceSquareAPI
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +36,11 @@ class ImageHandler:
         self.supported_formats = ['JPEG', 'PNG', 'GIF', 'WEBP']
         self.max_image_size = (1920, 1080)  # Maximum image dimensions
         self.max_file_size = 10 * 1024 * 1024  # 10MB
+        self.binance_api: Optional[BinanceSquareAPI] = None
+
+    def set_binance_api(self, binance_api: BinanceSquareAPI):
+        """Set the Binance API client for uploads."""
+        self.binance_api = binance_api
 
     async def process_image(
         self,
@@ -60,7 +70,7 @@ class ImageHandler:
                 raise ValueError(f"Unsupported image format: {image.format}")
 
             # Resize image if necessary
-            if image.size != self.max_image_size:
+            if image.size[0] > self.max_image_size[0] or image.size[1] > self.max_image_size[1]:
                 image.thumbnail(self.max_image_size, Image.Resampling.LANCZOS)
 
             # Add watermark if configured
@@ -100,43 +110,130 @@ class ImageHandler:
         filename: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Upload processed image to Binance Square.
+        Upload processed image to Binance Square using the 4-step v2 flow.
+
+        Step 1: Get presigned URL
+        Step 2: PUT image to presigned URL
+        Step 3: Poll image status
+        Step 4: Return image URL for use in post
 
         Args:
             image_data: Processed image data
             filename: Optional filename
 
         Returns:
-            Upload response with image URL
+            Dictionary with image URL
         """
-        # Process the image
-        processed = await self.process_image(image_data)
+        if not self.binance_api:
+            raise RuntimeError("Binance API not set. Call set_binance_api() first.")
 
-        # Prepare upload data
-        upload_data = {
-            'image': base64.b64encode(processed['data']).decode('utf-8'),
-            'contentType': processed['mime_type'],
-            'filename': filename or f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg",
-            'size': len(processed['data']),
-            'hash': processed['hash'],
-            'dimensions': {
-                'width': processed['size'][0],
-                'height': processed['size'][1]
-            }
-        }
+        if not filename:
+            filename = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
 
-        # Note: This would be implemented with actual Binance API call
-        # For now, returning mock response
-        mock_response = {
-            'url': f"https://www.binance.com/square/images/{upload_data['hash']}.{upload_data['filename'].split('.')[-1]}",
-            'id': f"img_{upload_data['hash'][:8]}",
-            'uploadTime': datetime.now().isoformat(),
-            'size': upload_data['size'],
-            'format': upload_data['filename'].split('.')[-1].upper()
-        }
+        # Ensure format is correct for filename
+        if filename.lower().endswith('.jpg') or filename.lower().endswith('.jpeg'):
+            content_type = 'image/jpeg'
+        elif filename.lower().endswith('.png'):
+            content_type = 'image/png'
+        elif filename.lower().endswith('.gif'):
+            content_type = 'image/gif'
+        elif filename.lower().endswith('.webp'):
+            content_type = 'image/webp'
+        else:
+            content_type = 'image/jpeg'
+            filename = filename.rsplit('.', 1)[0] + '.jpg'
 
-        logger.info(f"Image uploaded successfully: {mock_response['url']}")
-        return mock_response
+        try:
+            # Step 1: Get presigned URL
+            logger.info(f"Step 1: Getting presigned URL for {filename}")
+            presigned_response = await self.binance_api._request(
+                'POST',
+                f'{self.binance_api.openapi_v2_url}/image/presignedUrl',
+                data={'imageName': filename}
+            )
+
+            presigned_data = presigned_response.get('data', {})
+            presigned_url = presigned_data.get('presignedUrl')
+            file_ticket = presigned_data.get('fileTicket')
+
+            if not presigned_url or not file_ticket:
+                raise Exception(f"Failed to get presigned URL: {presigned_response}")
+
+            logger.info(f"Got presigned URL, fileTicket: {file_ticket}")
+
+            # Step 2: Upload image to presigned URL (PUT request)
+            logger.info(f"Step 2: Uploading image to presigned URL")
+            timeout = aiohttp.ClientTimeout(total=30, connect=10, sock_read=20)
+            async with aiohttp.ClientSession(timeout=timeout) as upload_session:
+                async with upload_session.put(
+                    presigned_url,
+                    data=image_data,
+                    headers={'Content-Type': content_type}
+                ) as response:
+                    if response.status >= 400:
+                        error_text = await response.text()
+                        raise Exception(f"Image upload to presigned URL failed: HTTP {response.status} - {error_text}")
+
+            logger.info(f"Image uploaded to presigned URL successfully")
+
+            # Step 3: Poll image status
+            logger.info(f"Step 3: Polling image status")
+            image_url = await self._poll_image_status(file_ticket)
+            if not image_url:
+                raise Exception("Image processing timed out or failed")
+
+            logger.info(f"Step 4: Image ready at {image_url}")
+            return {'url': image_url}
+
+        except Exception as e:
+            logger.error(f"Failed to upload image to Binance: {e}")
+            raise
+
+    async def _poll_image_status(self, file_ticket: str, max_attempts: int = 10, delay: int = 3) -> Optional[str]:
+        """
+        Poll image processing status.
+
+        Args:
+            file_ticket: File ticket from presigned URL response
+            max_attempts: Maximum polling attempts
+            delay: Delay between attempts in seconds
+
+        Returns:
+            Image URL if successful, None otherwise
+        """
+        if not self.binance_api:
+            raise RuntimeError("Binance API not set")
+
+        for attempt in range(max_attempts):
+            try:
+                status_response = await self.binance_api._request(
+                    'POST',
+                    f'{self.binance_api.openapi_v2_url}/image/imageStatus',
+                    data={'fileTicket': file_ticket}
+                )
+
+                status_data = status_response.get('data', {})
+                status = status_data.get('status')
+                image_url = status_data.get('imageUrl')
+
+                if status == 1 and image_url:  # Success
+                    return image_url
+                elif status == 2:  # Failed
+                    logger.error(f"Image processing failed: {status_data}")
+                    return None
+                elif status == 0:  # Processing
+                    logger.debug(f"Image processing... attempt {attempt + 1}/{max_attempts}")
+                    await asyncio.sleep(delay)
+                    continue
+
+            except Exception as e:
+                logger.warning(f"Poll attempt {attempt + 1} failed: {e}")
+                if attempt < max_attempts - 1:
+                    await asyncio.sleep(delay)
+                continue
+
+        logger.error(f"Image polling timed out after {max_attempts} attempts")
+        return None
 
     def _add_watermark(self, image: Image.Image, text: str) -> Image.Image:
         """
