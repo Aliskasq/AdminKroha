@@ -1048,7 +1048,8 @@ class BinanceSquareBot:
             post_result = await self.binance_api.post_content(
                 formatted_content,
                 post_type='article',
-                image_url=cover_url  # Will be sent as cover
+                image_url=cover_url,  # Will be sent as cover
+                title=title  # Required for articles
             )
 
             # Clear pending state
