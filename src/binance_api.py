@@ -164,7 +164,8 @@ class BinanceSquareAPI:
         image_url: Optional[str] = None,
         image_list: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
-        poll: Optional[Dict] = None
+        poll: Optional[Dict] = None,
+        title: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Post content to Binance Square.
@@ -191,6 +192,10 @@ class BinanceSquareAPI:
             'contentType': content_type,
             'bodyTextOnly': content
         }
+
+        # Add title for articles (required by Binance API for contentType=2)
+        if post_type == 'article' and title:
+            data['title'] = title
 
         # Add images based on post type
         if post_type == 'article':
