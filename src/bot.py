@@ -72,6 +72,7 @@ class BinanceSquareBot:
     async def is_group_admin(self, update: Update) -> bool:
         """
         Check if the user is an administrator or creator of the group.
+        Owner (ADMIN_USER_ID) always has access regardless of group admin status.
 
         Args:
             update: Telegram update object
@@ -79,24 +80,24 @@ class BinanceSquareBot:
         Returns:
             True if user is admin or creator, False otherwise
         """
+        user_id = update.effective_user.id
+
+        # Owner always has access
+        admin_user_id = getattr(self.config, 'admin_user_id', None)
+        if admin_user_id:
+            try:
+                if user_id == int(admin_user_id):
+                    return True
+            except (ValueError, TypeError):
+                pass
+
+        # Check group admin status
         try:
             chat_id = update.effective_chat.id
-            user_id = update.effective_user.id
             member = await update.get_bot().get_chat_member(chat_id, user_id)
             return member.status in ['administrator', 'creator']
         except Exception as e:
             logger.error(f"Error checking admin status: {e}")
-            # Fallback: check against ADMIN_USER_ID from config
-            admin_user_id = getattr(self.config, 'admin_user_id', None)
-            if admin_user_id:
-                try:
-                    admin_id = int(admin_user_id)
-                    user_id = update.effective_user.id
-                    if user_id == admin_id:
-                        logger.warning(f"Fallback to ADMIN_USER_ID check: user {user_id} is admin")
-                        return True
-                except (ValueError, TypeError):
-                    pass
             return False
 
     async def is_admin_in_configured_group(self, user_id: int) -> bool:
@@ -1128,28 +1129,27 @@ class BinanceSquareBot:
             await self._delete_scheduled_post(query, user_id, post_id)
 
     async def _is_user_admin_in_group(self, user_id: int) -> bool:
-        """Check if user is admin in the configured group."""
+        """Check if user is admin in the configured group.
+        Owner (ADMIN_USER_ID) always has access regardless of group admin status."""
+        # Owner always has access
+        admin_user_id = getattr(self.config, 'admin_user_id', None)
+        if admin_user_id:
+            try:
+                if user_id == int(admin_user_id):
+                    return True
+            except (ValueError, TypeError):
+                pass
+
+        # Check group admin status
         try:
             if not self.config.telegram_group_id:
                 return False
             chat_id = int(self.config.telegram_group_id)
             member = await self.bot.get_chat_member(chat_id, user_id)
-            if member.status in ['administrator', 'creator']:
-                return True
+            return member.status in ['administrator', 'creator']
         except Exception as e:
             logger.error(f"Error checking admin status: {e}")
-
-        # Fallback: check against ADMIN_USER_ID from config
-        admin_user_id = getattr(self.config, 'admin_user_id', None)
-        if admin_user_id:
-            try:
-                admin_id = int(admin_user_id)
-                if user_id == admin_id:
-                    logger.warning(f"Fallback to ADMIN_USER_ID check: user {user_id} is admin")
-                    return True
-            except (ValueError, TypeError):
-                pass
-        return False
+            return False
 
     async def _show_scheduled_posts(self, query, user_id: int):
         """Show scheduled posts with delete buttons."""
