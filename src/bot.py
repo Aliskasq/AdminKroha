@@ -1013,7 +1013,8 @@ class BinanceSquareBot:
                 f"📝 Добавление текста к статье\n\n"
                 f"📋 Заголовок: {title}\n\n"
                 f"Пришлите текст сообщением (будет добавлен к концу статьи).\n"
-                f"Можете прислать несколько сообщений подряд."
+                f"Можете прислать несколько сообщений подряд.\n\n"
+                f"Для отмены: /cancel",
             )
             logger.info(f"User {username} requested to add text to article")
 
@@ -1144,6 +1145,11 @@ class BinanceSquareBot:
         elif callback_data == 'run_list_scheduled':
             # Show scheduled posts with delete buttons
             await self._show_scheduled_posts(query, user_id)
+
+        elif callback_data == 'run_back':
+            # Back to main menu
+            await self.run_command(query, context)
+            return
 
         elif callback_data.startswith('run_delete_'):
             # Delete scheduled post
@@ -2612,22 +2618,25 @@ class BinanceSquareBot:
 
                 preview = article['content'][:200] + '...' if len(article['content']) > 200 else article['content']
 
+                keyboard = [
+                    [InlineKeyboardButton("📝 Добавить текст", callback_data='art_add_text')],
+                    [InlineKeyboardButton("🖼️ Добавить обложку", callback_data='art_add_cover')],
+                    [InlineKeyboardButton("✅ Отправить статью", callback_data='art_send')],
+                    [InlineKeyboardButton("❌ Отмена", callback_data='art_cancel')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
                 await update.message.reply_text(
                     f"📝 Текст добавлен к статье\n\n"
                     f"📋 Заголовок: {article.get('title', '')}\n\n"
                     f"📝 Текст ({len(article['content'])} симв.):\n{preview}\n\n"
                     f"{cover_status}\n\n"
-                    f"Теперь укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n"
-                    f"Примеры: `17:41`, `17:41+1`, `09:00+2`\n\n"
-                    f"Для отмены: /cancel",
+                    f"Можете добавить текст, обложку или отправить статью:",
+                    reply_markup=reply_markup
                 )
 
-                # Transition to scheduling state based on article type
-                article_type = self.user_data[user_id].get('run_article_type', 'text_only')
-                if article_type == 'with_photo':
-                    self.user_data[user_id]['run_state'] = 'article_photo_waiting_time'
-                else:
-                    self.user_data[user_id]['run_state'] = 'article_waiting_time'
+                # Stay in content state to allow adding more text or cover
+                # Only transition to time when user clicks "Отправить статью"
 
             elif run_state == 'schedule_waiting_text':
                 # Store content and wait for time
