@@ -1111,24 +1111,36 @@ class BinanceSquareBot:
             return
 
         elif callback_data == 'run_post_text':
-            # Start text post creation
-            self.user_data[user_id]['run_state'] = 'post_text_waiting'
+            # Start text post creation - ask Now or Scheduled
+            keyboard = [
+                [InlineKeyboardButton("⚡ Сейчас", callback_data='run_post_text_now')],
+                [InlineKeyboardButton("⏰ Отложенный", callback_data='run_post_text_scheduled')],
+                [InlineKeyboardButton("❌ Отмена", callback_data='run_cancel')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             await query.edit_message_text(
-                f"📝 **Создание текстового поста**\n\n"
-                f"Пришлите текст поста (поддерживается Markdown, хештеги #, тикеры $):\n\n"
-                f"Максимум 1100 символов.\n\n"
-                f"Для отмены: /cancel",
+                f"📝 **Текстовый пост**\n\n"
+                f"Выберите когда опубликовать:\n\n"
+                f"⚡ **Сейчас** — сразу в Binance\n"
+                f"⏰ **Отложенный** — выберите дату и время",
+                reply_markup=reply_markup
             )
             logger.info(f"User {username} started text post creation via /run")
 
         elif callback_data == 'run_post_photo':
-            # Start photo post creation
-            self.user_data[user_id]['run_state'] = 'post_photo_waiting_text'
+            # Start photo post creation - ask Now or Scheduled
+            keyboard = [
+                [InlineKeyboardButton("⚡ Сейчас", callback_data='run_post_photo_now')],
+                [InlineKeyboardButton("⏰ Отложенный", callback_data='run_post_photo_scheduled')],
+                [InlineKeyboardButton("❌ Отмена", callback_data='run_cancel')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             await query.edit_message_text(
-                f"🖼 **Создание поста с фото**\n\n"
-                f"Шаг 1/2: Пришлите текст поста (поддерживается Markdown):\n\n"
-                f"После текста пришлите 1-2 фото.\n\n"
-                f"Для отмены: /cancel",
+                f"🖼 **Пост с фото**\n\n"
+                f"Выберите когда опубликовать:\n\n"
+                f"⚡ **Сейчас** — сразу в Binance\n"
+                f"⏰ **Отложенный** — выберите дату и время",
+                reply_markup=reply_markup
             )
             logger.info(f"User {username} started photo post creation via /run")
 
@@ -1199,6 +1211,108 @@ class BinanceSquareBot:
             # Delete scheduled post
             post_id = callback_data.replace('run_delete_', '')
             await self._delete_scheduled_post(query, user_id, post_id)
+
+        # Text post - Now
+        elif callback_data == 'run_post_text_now':
+            self.user_data[user_id]['run_state'] = 'post_text_waiting'
+            self.user_data[user_id]['run_post_schedule'] = 'now'
+            await query.edit_message_text(
+                f"📝 **Текстовый пост — Сейчас**\n\n"
+                f"Пришлите текст поста (поддерживается Markdown, хештеги #, тикеры $):\n\n"
+                f"Максимум 1100 символов.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started text post (now) via /run")
+
+        elif callback_data == 'run_post_text_scheduled':
+            # Ask Today or Tomorrow
+            keyboard = [
+                [InlineKeyboardButton("📅 Сегодня", callback_data='run_post_text_today')],
+                [InlineKeyboardButton("📅 Завтра", callback_data='run_post_text_tomorrow')],
+                [InlineKeyboardButton("🔙 Назад", callback_data='run_post_text')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                f"📝 **Текстовый пост — Отложенный**\n\n"
+                f"Выберите дату публикации:\n\n"
+                f"📅 **Сегодня** — публикуется сегодня\n"
+                f"📅 **Завтра** — публикуется завтра",
+                reply_markup=reply_markup
+            )
+            logger.info(f"User {username} chose scheduled text post")
+
+        elif callback_data == 'run_post_text_today':
+            self.user_data[user_id]['run_state'] = 'post_text_waiting'
+            self.user_data[user_id]['run_post_schedule'] = 'today'
+            await query.edit_message_text(
+                f"📝 **Текстовый пост — Сегодня**\n\n"
+                f"Пришлите текст поста (поддерживается Markdown, хештеги #, тикеры $):\n\n"
+                f"Максимум 1100 символов.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started text post (today) via /run")
+
+        elif callback_data == 'run_post_text_tomorrow':
+            self.user_data[user_id]['run_state'] = 'post_text_waiting'
+            self.user_data[user_id]['run_post_schedule'] = 'tomorrow'
+            await query.edit_message_text(
+                f"📝 **Текстовый пост — Завтра**\n\n"
+                f"Пришлите текст поста (поддерживается Markdown, хештеги #, тикеры $):\n\n"
+                f"Максимум 1100 символов.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started text post (tomorrow) via /run")
+
+        elif callback_data == 'run_post_photo_now':
+            # Start photo post creation - immediate
+            self.user_data[user_id]['run_state'] = 'post_photo_waiting_text'
+            self.user_data[user_id]['run_post_schedule'] = 'now'
+            await query.edit_message_text(
+                f"🖼 **Пост с фото — Сейчас**\n\n"
+                f"Шаг 1/2: Пришлите текст поста (поддерживается Markdown):\n\n"
+                f"После текста пришлите 1-2 фото.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started photo post (now) via /run")
+
+        elif callback_data == 'run_post_photo_scheduled':
+            # Ask Today or Tomorrow
+            keyboard = [
+                [InlineKeyboardButton("📅 Сегодня", callback_data='run_post_photo_today')],
+                [InlineKeyboardButton("📅 Завтра", callback_data='run_post_photo_tomorrow')],
+                [InlineKeyboardButton("🔙 Назад", callback_data='run_post_photo')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                f"🖼 **Пост с фото — Отложенный**\n\n"
+                f"Выберите дату публикации:\n\n"
+                f"📅 **Сегодня** — публикуется сегодня\n"
+                f"📅 **Завтра** — публикуется завтра",
+                reply_markup=reply_markup
+            )
+            logger.info(f"User {username} chose scheduled photo post")
+
+        elif callback_data == 'run_post_photo_today':
+            self.user_data[user_id]['run_state'] = 'post_photo_waiting_text'
+            self.user_data[user_id]['run_post_schedule'] = 'today'
+            await query.edit_message_text(
+                f"🖼 **Пост с фото — Сегодня**\n\n"
+                f"Шаг 1/2: Пришлите текст поста (поддерживается Markdown):\n\n"
+                f"После текста пришлите 1-2 фото.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started photo post (today) via /run")
+
+        elif callback_data == 'run_post_photo_tomorrow':
+            self.user_data[user_id]['run_state'] = 'post_photo_waiting_text'
+            self.user_data[user_id]['run_post_schedule'] = 'tomorrow'
+            await query.edit_message_text(
+                f"🖼 **Пост с фото — Завтра**\n\n"
+                f"Шаг 1/2: Пришлите текст поста (поддерживается Markdown):\n\n"
+                f"После текста пришлите 1-2 фото.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started photo post (tomorrow) via /run")
 
     async def _is_user_admin_in_group(self, user_id: int) -> bool:
         """Check if user is admin in the configured group.
@@ -2023,12 +2137,8 @@ class BinanceSquareBot:
                 InlineKeyboardButton("🖼 Пост с фото", callback_data='run_post_photo'),
             ],
             [
-                InlineKeyboardButton("📰 Статья (сегодня до 00:00 UTC+0)", callback_data='run_article_today'),
-                InlineKeyboardButton("📰 Статья (завтра после 00:00 UTC+0)", callback_data='run_article_tomorrow'),
-            ],
-            [
-                InlineKeyboardButton("⏰ Отложенный пост", callback_data='run_schedule'),
-                InlineKeyboardButton("📋 Мои отложенные", callback_data='run_list_scheduled'),
+                InlineKeyboardButton("📰 Статья сегодня", callback_data='run_article_today'),
+                InlineKeyboardButton("📰 Статья завтра", callback_data='run_article_tomorrow'),
             ],
             [
                 InlineKeyboardButton("🔔 Напоминание", callback_data='run_reminder'),
@@ -2040,13 +2150,10 @@ class BinanceSquareBot:
         await update.message.reply_text(
             f"🚀 **AdminKroha — Главное меню**\n\n"
             f"Выберите действие:\n\n"
-            f"📝 **Текстовый пост** — сразу публикуется в Binance\n"
-            f"🖼 **Пост с фото** — текст + 1-2 фото\n"
-            f"📰 **Статья (сегодня до 00:00 UTC+0)** — статья в отложку на сегодня\n"
-            f"📰 **Статья (завтра после 00:00 UTC+0)** — статья в отложку на завтра\n"
-            f"⏰ **Отложенный пост** — текст + время (ЧЧ:ММ или ЧЧ:ММ+X)\n"
-            f"📋 **Мои отложенные** — просмотр и удаление запланированных постов\n"
-            f"🔔 **Напоминание** — только в Telegram (для сотрудников)\n\n"
+            f"📝 **Текстовый пост** — сейчас или отложенный (сегодня/завтра + время)\n"
+            f"🖼 **Пост с фото** — сейчас или отложенный (сегодня/завтра + время)\n"
+            f"📰 **Статья сегодня** — заголовок → текст → обложка (опц.) → время\n"
+            f"📰 **Статья завтра** — заголовок → текст → обложка (опц.) → время\n\n"
             f"👤 Пользователь: {username}",
             reply_markup=reply_markup
         )
@@ -2571,37 +2678,96 @@ class BinanceSquareBot:
 
         try:
             if run_state == 'post_text_waiting':
-                # Create text post immediately
+                # Check schedule type
+                schedule = self.user_data[user_id].get('run_post_schedule', 'now')
                 content = text
                 formatted_content = self.content_generator.generate_content(content, post_type='text')
-                result = await self.binance_api.post_content(formatted_content, post_type='text')
-                post_id = result.get('data', {}).get('id', 'N/A')
-                share_link = result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
 
-                await update.message.reply_text(
-                    f"✅ **Текстовый пост опубликован!** 🎉\n\n"
-                    f"📝 Контент:\n{formatted_content}\n\n"
-                    f"🆔 Post ID: {post_id}\n"
-                    f"🔗 Ссылка: {share_link}"
-                )
+                if schedule == 'now':
+                    # Publish immediately
+                    result = await self.binance_api.post_content(formatted_content, post_type='text')
+                    post_id = result.get('data', {}).get('id', 'N/A')
+                    share_link = result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
+
+                    await update.message.reply_text(
+                        f"✅ **Текстовый пост опубликован!** 🎉\n\n"
+                        f"📝 Контент:\n{formatted_content}\n\n"
+                        f"🆔 Post ID: {post_id}\n"
+                        f"🔗 Ссылка: {share_link}"
+                    )
+                    logger.info(f"User {username} published text post via /run: {content[:50]}...")
+
+                elif schedule in ('today', 'tomorrow'):
+                    # Schedule the post
+                    schedule_type = self.user_data[user_id].get('run_post_schedule', 'today')
+
+                    if schedule_type == 'today':
+                        # Schedule for today
+                        scheduled_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                        if scheduled_time <= datetime.now():
+                            scheduled_time += timedelta(days=1)
+                        scheduled_time = scheduled_time - timedelta(hours=self.config.timezone_offset)
+                    else:  # tomorrow
+                        scheduled_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                        scheduled_time = scheduled_time - timedelta(hours=self.config.timezone_offset)
+
+                    post_id = await self.scheduler.schedule_post(
+                        scheduled_time,
+                        content,
+                        user_id,
+                        timezone_offset=self.config.timezone_offset
+                    )
+
+                    tz_offset = self.config.timezone_offset
+                    display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                    await update.message.reply_text(
+                        f"✅ **Отложенный текстовый пост создан!** 🎉\n\n"
+                        f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+                        f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                        f"🆔 ID: {post_id}\n\n"
+                        f"Пост опубликуется автоматически."
+                    )
+                    logger.info(f"User scheduled text post via /run: {post_id}")
+
                 self.user_data[user_id].pop('run_state', None)
-                logger.info(f"User {username} published text post via /run: {content[:50]}...")
+                self.user_data[user_id].pop('run_post_schedule', None)
+                logger.info(f"User {username} published/scheduled text post via /run: {content[:50]}...")
 
             elif run_state == 'post_photo_waiting_text':
-                # Store text and wait for photo
-                self.user_data[user_id]['pending_image_post'] = text
-                self.user_data[user_id]['pending_images'] = []
-                self.user_data[user_id]['run_state'] = 'post_photo_waiting_photo'
+                # Check schedule type
+                schedule = self.user_data[user_id].get('run_post_schedule', 'now')
+                text_content = text
 
-                keyboard = [[InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
+                if schedule == 'now':
+                    # Store text and wait for photo - immediate publish
+                    self.user_data[user_id]['pending_image_post'] = text
+                    self.user_data[user_id]['pending_images'] = []
+                    self.user_data[user_id]['run_state'] = 'post_photo_waiting_photo'
 
-                await update.message.reply_text(
-                    f"📝 Текст принят.\n\n"
-                    f"Теперь пришлите 1-2 фото для поста.",
-                    reply_markup=InlineKeyboardMarkup(keyboard)
-                )
-                self.user_data[user_id]['run_state'] = 'post_photo_active'
+                    keyboard = [[InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+
+                    await update.message.reply_text(
+                        f"📝 Текст принят.\n\n"
+                        f"Теперь пришлите 1-2 фото для поста.",
+                        reply_markup=InlineKeyboardMarkup(keyboard)
+                    )
+                    self.user_data[user_id]['run_state'] = 'post_photo_active'
+
+                elif schedule in ('today', 'tomorrow'):
+                    # Schedule for today or tomorrow
+                    self.user_data[user_id]['pending_image_post'] = text
+                    self.user_data[user_id]['pending_images'] = []
+                    # For scheduled photo posts, we need to ask for time
+                    self.user_data[user_id]['run_state'] = 'post_photo_scheduled_waiting_time'
+
+                    await update.message.reply_text(
+                        f"📝 Текст принят.\n\n"
+                        f"Теперь укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n"
+                        f"Примеры: `17:41`, `17:41+1`, `09:00+2`\n\n"
+                        f"Для отмены: /cancel",
+                    )
 
             elif run_state == 'article_waiting_title':
                 # Store title and wait for content
@@ -2763,8 +2929,8 @@ class BinanceSquareBot:
                 self.user_data[user_id].pop('run_article_type', None)
                 logger.info(f"User scheduled article via /run: {post_id}")
 
-            elif run_state == 'article_photo_waiting_time':
-                # Parse time and schedule article with photo
+            elif run_state == 'post_photo_scheduled_waiting_time':
+                # Parse time and schedule photo post
                 time_str = text.strip()
                 scheduled_time = self._parse_time(time_str)
                 if not scheduled_time:
@@ -2775,35 +2941,47 @@ class BinanceSquareBot:
                     )
                     return
 
-                article = self.user_data[user_id].pop('pending_article', {})
-                title = article.get('title', '')
-                content = article.get('content', '')
-                cover_url = article.get('cover_url')
+                text_content = self.user_data[user_id].pop('pending_image_post', '')
+                images = self.user_data[user_id].pop('pending_images', [])
+                schedule_type = self.user_data[user_id].pop('run_post_schedule', 'today')
 
-                # Schedule the article with photo
-                post_id = await self.scheduler.schedule_post(
-                    scheduled_time,
-                    content,
-                    user_id,
-                    options={'type': 'article', 'title': title, 'cover_url': cover_url}
+                if schedule_type == 'today':
+                    # Schedule for today at specified time
+                    pass  # _parse_time already handles the time
+                else:  # tomorrow
+                    # Add one day
+                    scheduled_time += timedelta(days=1)
+
+                # Post to Binance with images
+                formatted_content = self.content_generator.generate_content(
+                    text_content,
+                    post_type='image'
                 )
 
-                # Format display time with timezone
+                result = await self.binance_api.post_content(
+                    formatted_content,
+                    post_type='image',
+                    image_list=images[:2]
+                )
+
+                post_id = result.get('data', {}).get('id', 'N/A')
+                share_link = result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
+
                 tz_offset = self.config.timezone_offset
                 display_time = scheduled_time + timedelta(hours=tz_offset)
 
                 await update.message.reply_text(
-                    f"✅ **Отложенная статья с фото создана!** 🎉\n\n"
-                    f"📋 Заголовок: {title}\n"
-                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
-                    f"🖼️ Обложка: {'Да' if cover_url else 'Нет'}\n"
+                    f"✅ **Отложенный пост с фото создан!** 🎉\n\n"
+                    f"📝 Контент: {text_content[:100]}{'...' if len(text_content) > 100 else ''}\n"
+                    f"🖼️ Изображений: {len(images)}\n"
                     f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
                     f"🆔 ID: {post_id}\n\n"
-                    f"Статья опубликуется автоматически.",
+                    f"Пост опубликуется автоматически."
                 )
+
                 self.user_data[user_id].pop('run_state', None)
-                self.user_data[user_id].pop('run_article_type', None)
-                logger.info(f"User scheduled article with photo via /run: {post_id}")
+                self.user_data[user_id].pop('run_post_schedule', None)
+                logger.info(f"User scheduled photo post via /run: {post_id}")
 
             elif run_state == 'reminder_waiting_type':
                 # Parse reminder: type time [days] message
