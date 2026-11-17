@@ -1037,11 +1037,6 @@ class BinanceSquareBot:
         username = query.from_user.username or query.from_user.first_name
         callback_data = query.data
 
-        # Check if user is group admin
-        if not await self._is_user_admin_in_group(user_id):
-            await query.edit_message_text("❌ Только администраторы группы могут использовать это меню!")
-            return
-
         if callback_data == 'run_cancel':
             await query.edit_message_text("❌ Меню закрыто.")
             return
