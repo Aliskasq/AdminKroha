@@ -12,10 +12,13 @@ WorkingDirectory=/root/AdminKroha
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONPATH=/root/AdminKroha/src
 Environment=LOG_LEVEL=INFO
-Environment=VIRTUAL_ENV=/root/AdminKroha/venv_production
-Environment=PATH=/root/AdminKroha/venv_production/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=VIRTUAL_ENV=/root/AdminKroha/venv
+Environment=PATH=/root/AdminKroha/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-ExecStart=/root/AdminKroha/venv_production/bin/python /root/AdminKroha/main.py
+# Install/update dependencies before start (handles reboot after git pull)
+ExecStartPre=/root/AdminKroha/venv/bin/pip install -r /root/AdminKroha/requirements.txt
+
+ExecStart=/root/AdminKroha/venv/bin/python /root/AdminKroha/main.py
 
 Restart=on-failure
 RestartSec=10
