@@ -1068,22 +1068,24 @@ class BinanceSquareBot:
             logger.info(f"User {username} started photo post creation via /run")
 
         elif callback_data == 'run_article':
-            # Start article creation (text only)
+            # Start article creation (text only) - with scheduling
             self.user_data[user_id]['run_state'] = 'article_waiting_title'
+            self.user_data[user_id]['run_article_type'] = 'text_only'
             await query.edit_message_text(
                 f"📰 **Создание статьи**\n\n"
-                f"Шаг 1/2: Пришлите заголовок статьи:\n\n"
+                f"Шаг 1/3: Пришлите заголовок статьи:\n\n"
                 f"Для отмены: /cancel",
             )
             logger.info(f"User {username} started article creation via /run")
 
         elif callback_data == 'run_article_photo':
-            # Start article with photo
+            # Start article with photo - with scheduling
             self.user_data[user_id]['run_state'] = 'article_photo_waiting_title'
+            self.user_data[user_id]['run_article_type'] = 'with_photo'
             await query.edit_message_text(
                 f"📰 **Создание статьи с фото**\n\n"
                 f"Шаг 1/3: Пришлите заголовок статьи:\n\n"
-                f"Потом текст, потом обложка.\n\n"
+                f"Потом текст, потом обложка, потом время.\n\n"
                 f"Для отмены: /cancel",
             )
             logger.info(f"User {username} started article with photo creation via /run")
@@ -2574,14 +2576,6 @@ class BinanceSquareBot:
 
                 cover_status = '🖼️ Обложка: есть' if article.get('cover_url') else '🖼️ Обложки: нет'
 
-                keyboard = [
-                    [InlineKeyboardButton("📝 Добавить текст", callback_data='art_add_text')],
-                    [InlineKeyboardButton("🖼️ Добавить обложку", callback_data='art_add_cover')],
-                    [InlineKeyboardButton("✅ Отправить статью", callback_data='art_send')],
-                    [InlineKeyboardButton("❌ Отмена", callback_data='art_cancel')]
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-
                 preview = article['content'][:200] + '...' if len(article['content']) > 200 else article['content']
 
                 await update.message.reply_text(
@@ -2589,9 +2583,17 @@ class BinanceSquareBot:
                     f"📋 Заголовок: {article.get('title', '')}\n\n"
                     f"📝 Текст ({len(article['content'])} симв.):\n{preview}\n\n"
                     f"{cover_status}\n\n"
-                    f"Кнопки управления:",
-                    reply_markup=reply_markup
+                    f"Теперь укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n"
+                    f"Примеры: `17:41`, `17:41+1`, `09:00+2`\n\n"
+                    f"Для отмены: /cancel",
                 )
+
+                # Transition to scheduling state based on article type
+                article_type = self.user_data[user_id].get('run_article_type', 'text_only')
+                if article_type == 'with_photo':
+                    self.user_data[user_id]['run_state'] = 'article_photo_waiting_time'
+                else:
+                    self.user_data[user_id]['run_state'] = 'article_waiting_time'
 
             elif run_state == 'schedule_waiting_text':
                 # Store content and wait for time
@@ -2633,6 +2635,88 @@ class BinanceSquareBot:
                 )
                 self.user_data[user_id].pop('run_state', None)
                 logger.info(f"User scheduled post via /run: {post_id}")
+
+            elif run_state == 'article_waiting_time':
+                # Parse time and schedule article (text only)
+                time_str = text.strip()
+                scheduled_time = self._parse_time(time_str)
+                if not scheduled_time:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат времени!\n"
+                        f"Используйте ЧЧ:ММ или ЧЧ:ММ+X (например: 17:41+1)\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                article = self.user_data[user_id].pop('pending_article', {})
+                title = article.get('title', '')
+                content = article.get('content', '')
+
+                # Schedule the article
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
+                    content,
+                    user_id,
+                    options={'type': 'article', 'title': title}
+                )
+
+                # Format display time with timezone
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await update.message.reply_text(
+                    f"✅ **Отложенная статья создана!** 🎉\n\n"
+                    f"📋 Заголовок: {title}\n"
+                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Статья опубликуется автоматически.",
+                )
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_article_type', None)
+                logger.info(f"User scheduled article via /run: {post_id}")
+
+            elif run_state == 'article_photo_waiting_time':
+                # Parse time and schedule article with photo
+                time_str = text.strip()
+                scheduled_time = self._parse_time(time_str)
+                if not scheduled_time:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат времени!\n"
+                        f"Используйте ЧЧ:ММ или ЧЧ:ММ+X (например: 17:41+1)\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                article = self.user_data[user_id].pop('pending_article', {})
+                title = article.get('title', '')
+                content = article.get('content', '')
+                cover_url = article.get('cover_url')
+
+                # Schedule the article with photo
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
+                    content,
+                    user_id,
+                    options={'type': 'article', 'title': title, 'cover_url': cover_url}
+                )
+
+                # Format display time with timezone
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await update.message.reply_text(
+                    f"✅ **Отложенная статья с фото создана!** 🎉\n\n"
+                    f"📋 Заголовок: {title}\n"
+                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+                    f"🖼️ Обложка: {'Да' if cover_url else 'Нет'}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Статья опубликуется автоматически.",
+                )
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_article_type', None)
+                logger.info(f"User scheduled article with photo via /run: {post_id}")
 
             elif run_state == 'reminder_waiting_type':
                 # Parse reminder: type time [days] message

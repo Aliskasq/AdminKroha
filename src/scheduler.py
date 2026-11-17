@@ -119,27 +119,36 @@ class PostScheduler:
         """
         content = post['content']
 
-        # Determine post type
-        post_type = self._detect_post_type(content)
-
-        # Prepare options
+        # Get post type from options or detect from content
         options = post.get('options', {})
+        post_type = options.get('type', self._detect_post_type(content))
+
+        # Prepare options for Binance API
+        binance_options = {
+            'tags': options.get('tags'),
+            'poll': options.get('poll')
+        }
+
+        # Handle article type
+        if post_type == 'article':
+            binance_options['title'] = options.get('title', '')
+            if options.get('cover_url'):
+                binance_options['image_url'] = options['cover_url']
 
         # Post to Binance
         result = await self.binance_api.post_content(
             content,
             post_type=post_type,
-            tags=options.get('tags'),
-            poll=options.get('poll')
+            **binance_options
         )
 
-        # Add image if specified
-        if options.get('image_url'):
+        # Add image if specified (for non-article posts)
+        if options.get('image_url') and post_type != 'article':
             image_result = await self.binance_api.upload_image(
                 open(options['image_url'], 'rb').read()
             )
 
-        logger.info(f"Published scheduled post: {post['id']}")
+        logger.info(f"Published scheduled post: {post['id']} (type: {post_type})")
         return result
 
     def _detect_post_type(self, content: str) -> str:
