@@ -1203,8 +1203,8 @@ class BinanceSquareBot:
             await self._show_scheduled_posts(query, user_id)
 
         elif callback_data == 'run_back':
-            # Back to main menu
-            await self.run_command(query, context)
+            # Back to main menu - show menu directly from callback
+            await self._show_main_menu(query, username)
             return
 
         elif callback_data.startswith('run_delete_'):
@@ -2148,6 +2148,35 @@ class BinanceSquareBot:
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
+            f"🚀 **AdminKroha — Главное меню**\n\n"
+            f"Выберите действие:\n\n"
+            f"📝 **Текстовый пост** — сейчас или отложенный (сегодня/завтра + время)\n"
+            f"🖼 **Пост с фото** — сейчас или отложенный (сегодня/завтра + время)\n"
+            f"📰 **Статья сегодня** — заголовок → текст → обложка (опц.) → время\n"
+            f"📰 **Статья завтра** — заголовок → текст → обложка (опц.) → время\n\n"
+            f"👤 Пользователь: {username}",
+            reply_markup=reply_markup
+        )
+
+    async def _show_main_menu(self, query, username: str) -> None:
+        """Show main menu from callback query."""
+        keyboard = [
+            [
+                InlineKeyboardButton("📝 Текстовый пост", callback_data='run_post_text'),
+                InlineKeyboardButton("🖼 Пост с фото", callback_data='run_post_photo'),
+            ],
+            [
+                InlineKeyboardButton("📰 Статья сегодня", callback_data='run_article_today'),
+                InlineKeyboardButton("📰 Статья завтра", callback_data='run_article_tomorrow'),
+            ],
+            [
+                InlineKeyboardButton("🔔 Напоминание", callback_data='run_reminder'),
+                InlineKeyboardButton("❌ Отмена", callback_data='run_cancel'),
+            ],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await query.edit_message_text(
             f"🚀 **AdminKroha — Главное меню**\n\n"
             f"Выберите действие:\n\n"
             f"📝 **Текстовый пост** — сейчас или отложенный (сегодня/завтра + время)\n"
