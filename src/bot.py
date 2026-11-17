@@ -1133,6 +1133,7 @@ class BinanceSquareBot:
         Owner (ADMIN_USER_ID) always has access regardless of group admin status."""
         # Owner always has access
         admin_user_id = getattr(self.config, 'admin_user_id', None)
+        logger.warning(f"DEBUG _is_user_admin_in_group: user_id={user_id}, admin_user_id={admin_user_id}, match={user_id == int(admin_user_id) if admin_user_id else 'no admin_id'}")
         if admin_user_id:
             try:
                 if user_id == int(admin_user_id):
