@@ -1021,7 +1021,188 @@ class BinanceSquareBot:
             await self._publish_article_post(user_id, query.message.chat.id, context.bot)
             logger.info(f"User {username} confirmed and sent article")
 
-    async def _publish_article_post(self, user_id: int, chat_id: int, bot) -> None:
+    async def handle_run_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle callback queries for /run command menu.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        query = update.callback_query
+        await query.answer()
+
+        user_id = query.from_user.id
+        username = query.from_user.username or query.from_user.first_name
+        callback_data = query.data
+
+        # Check if user is group admin
+        if not await self._is_user_admin_in_group(user_id):
+            await query.edit_message_text("❌ Только администраторы группы могут использовать это меню!")
+            return
+
+        if callback_data == 'run_cancel':
+            await query.edit_message_text("❌ Меню закрыто.")
+            return
+
+        elif callback_data == 'run_post_text':
+            # Start text post creation
+            self.user_data[user_id]['run_state'] = 'post_text_waiting'
+            await query.edit_message_text(
+                f"📝 **Создание текстового поста**\n\n"
+                f"Пришлите текст поста (поддерживается Markdown, хештеги #, тикеры $):\n\n"
+                f"Максимум 1100 символов.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started text post creation via /run")
+
+        elif callback_data == 'run_post_photo':
+            # Start photo post creation
+            self.user_data[user_id]['run_state'] = 'post_photo_waiting_text'
+            await query.edit_message_text(
+                f"🖼 **Создание поста с фото**\n\n"
+                f"Шаг 1/2: Пришлите текст поста (поддерживается Markdown):\n\n"
+                f"После текста пришлите 1-2 фото.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started photo post creation via /run")
+
+        elif callback_data == 'run_article':
+            # Start article creation (text only)
+            self.user_data[user_id]['run_state'] = 'article_waiting_title'
+            await query.edit_message_text(
+                f"📰 **Создание статьи**\n\n"
+                f"Шаг 1/2: Пришлите заголовок статьи:\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started article creation via /run")
+
+        elif callback_data == 'run_article_photo':
+            # Start article with photo
+            self.user_data[user_id]['run_state'] = 'article_photo_waiting_title'
+            await query.edit_message_text(
+                f"📰 **Создание статьи с фото**\n\n"
+                f"Шаг 1/3: Пришлите заголовок статьи:\n\n"
+                f"Потом текст, потом обложка.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started article with photo creation via /run")
+
+        elif callback_data == 'run_schedule':
+            # Start scheduled post creation
+            self.user_data[user_id]['run_state'] = 'schedule_waiting_text'
+            await query.edit_message_text(
+                f"⏰ **Создание отложенного поста**\n\n"
+                f"Шаг 1/2: Пришлите текст поста:\n\n"
+                f"Поддерживается Markdown, хештеги #, тикеры $.\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started scheduled post creation via /run")
+
+        elif callback_data == 'run_reminder':
+            # Start reminder creation (TG only)
+            self.user_data[user_id]['run_state'] = 'reminder_waiting_type'
+            await query.edit_message_text(
+                f"🔔 **Создание напоминания (только в Telegram)**\n\n"
+                f"Выберите тип:\n"
+                f"• task — задача\n"
+                f"• market — рынок\n"
+                f"• analysis — анализ\n"
+                f"• news — новости\n\n"
+                f"Формат: `тип время [дни] сообщение`\n"
+                f"Пример: `market 14:30+1 BTC price 0,1,2,3,4`\n\n"
+                f"Для отмены: /cancel",
+            )
+            self.user_data[user_id]['run_reminder_step'] = 'type'
+            logger.info(f"User {username} started reminder creation via /run")
+
+        elif callback_data == 'run_list_scheduled':
+            # Show scheduled posts with delete buttons
+            await self._show_scheduled_posts(query, user_id)
+
+        elif callback_data.startswith('run_delete_'):
+            # Delete scheduled post
+            post_id = callback_data.replace('run_delete_', '')
+            await self._delete_scheduled_post(query, user_id, post_id)
+
+    async def _is_user_admin_in_group(self, user_id: int) -> bool:
+        """Check if user is admin in the configured group."""
+        try:
+            if not self.config.telegram_group_id:
+                return False
+            chat_id = int(self.config.telegram_group_id)
+            member = await self.bot.get_chat_member(chat_id, user_id)
+            return member.status in ['administrator', 'creator']
+        except Exception as e:
+            logger.error(f"Error checking admin status: {e}")
+            return False
+
+    async def _show_scheduled_posts(self, query, user_id: int):
+        """Show scheduled posts with delete buttons."""
+        posts = self.scheduler.get_scheduled_posts('scheduled')
+        user_posts = [p for p in posts if p.get('user_id') == user_id]
+
+        if not user_posts:
+            await query.edit_message_text(
+                "📭 **Нет отложенных постов**\n\n"
+                "У вас нет запланированных постов.\n"
+                "Используйте /run → Отложенный пост для создания.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Назад в меню", callback_data='run_back')
+                ]])
+            )
+            return
+
+        text = "📋 **Ваши отложенные посты:**\n\n"
+        keyboard = []
+
+        for post in user_posts[:10]:  # Limit to 10
+            tz_offset = post.get('timezone_offset', 0)
+            display_time = post['scheduled_time'] + timedelta(hours=tz_offset)
+            tz_str = f"UTC{tz_offset:+d}" if tz_offset else "UTC+0"
+
+            preview = post['content'][:50] + "..." if len(post['content']) > 50 else post['content']
+            text += f"🆔 `{post['id']}`\n"
+            text += f"⏰ {display_time.strftime('%d.%m %H:%M')} ({tz_str})\n"
+            text += f"📝 {preview}\n\n"
+
+            keyboard.append([InlineKeyboardButton(
+                f"🗑 Удалить {post['id'][:12]}...",
+                callback_data=f'run_delete_{post["id"]}'
+            )])
+
+        keyboard.append([InlineKeyboardButton("🔙 Назад в меню", callback_data='run_back')])
+
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+
+    async def _delete_scheduled_post(self, query, user_id: int, post_id: str):
+        """Delete a scheduled post."""
+        success = await self.scheduler.cancel_scheduled_post(post_id)
+
+        if success:
+            # Also remove from bot's scheduled_posts list
+            self.scheduled_posts = [p for p in self.scheduled_posts if p['id'] != post_id]
+            await query.edit_message_text(
+                f"✅ **Пост удалён!**\n\n"
+                f"🆔 ID: `{post_id}`\n\n"
+                f"Пост больше не будет опубликован.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 К списку", callback_data='run_list_scheduled'),
+                    InlineKeyboardButton("🏠 В меню", callback_data='run_back')
+                ]])
+            )
+            logger.info(f"User {user_id} deleted scheduled post {post_id}")
+        else:
+            await query.edit_message_text(
+                f"❌ **Не удалось удалить пост**\n\n"
+                f"🆔 ID: `{post_id}`\n"
+                f"Возможно, пост уже опубликован или не существует.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 К списку", callback_data='run_list_scheduled')
+                ]])
+            )
+
+    async def _is_user_admin_in_group(self, user_id: int) -> bool:
         """
         Publish the collected article to Binance Square.
 
@@ -1735,6 +1916,55 @@ class BinanceSquareBot:
             await update.message.reply_text(error_msg)
             logger.error(f"Failed to update Binance API key: {e}")
 
+    async def run_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /run command - Main menu with inline keyboard for post/article creation.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        if not await self.require_group_admin(update, context):
+            return
+
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        # Main menu keyboard
+        keyboard = [
+            [
+                InlineKeyboardButton("📝 Текстовый пост", callback_data='run_post_text'),
+                InlineKeyboardButton("🖼 Пост с фото", callback_data='run_post_photo'),
+            ],
+            [
+                InlineKeyboardButton("📰 Статья", callback_data='run_article'),
+                InlineKeyboardButton("📰 Статья с фото", callback_data='run_article_photo'),
+            ],
+            [
+                InlineKeyboardButton("⏰ Отложенный пост", callback_data='run_schedule'),
+                InlineKeyboardButton("📋 Мои отложенные", callback_data='run_list_scheduled'),
+            ],
+            [
+                InlineKeyboardButton("🔔 Напоминание", callback_data='run_reminder'),
+                InlineKeyboardButton("❌ Отмена", callback_data='run_cancel'),
+            ],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(
+            f"🚀 **AdminKroha — Главное меню**\n\n"
+            f"Выберите действие:\n\n"
+            f"📝 **Текстовый пост** — сразу публикуется в Binance\n"
+            f"🖼 **Пост с фото** — текст + 1-2 фото\n"
+            f"📰 **Статья** — длинный пост с обложкой (contentType=2)\n"
+            f"📰 **Статья с фото** — статья + обложка\n"
+            f"⏰ **Отложенный пост** — текст + время (ЧЧ:ММ или ЧЧ:ММ+X)\n"
+            f"📋 **Мои отложенные** — просмотр и удаление запланированных постов\n"
+            f"🔔 **Напоминание** — только в Telegram (для сотрудников)\n\n"
+            f"👤 Пользователь: {username}",
+            reply_markup=reply_markup
+        )
+
     async def _update_env_file(self, key: str, value: str) -> None:
         """
         Update a key in the .env file.
@@ -2203,6 +2433,273 @@ class BinanceSquareBot:
             await update.message.reply_text(error_message)
             logger.error(f"Error triggering reminder for user {username}: {e}")
 
+    async def cancel_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /cancel command - Cancel any ongoing FSM state.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+
+        # Clear all possible run states
+        cleared = False
+        if user_id in self.user_data:
+            for key in list(self.user_data[user_id].keys()):
+                if key.startswith('run_') or key in ['pending_image_post', 'pending_images', 'pending_article', 'pending_images']:
+                    self.user_data[user_id].pop(key, None)
+                    cleared = True
+
+        if cleared:
+            await update.message.reply_text("❌ **Действие отменено.**\n\nВозвращаю в главное меню. Используйте /run для нового действия.")
+        else:
+            await update.message.reply_text("ℹ️ Нет активных действий для отмены.")
+
+    async def run_message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle text messages for /run command FSM states.
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        if user_id not in self.user_data:
+            return
+
+        run_state = self.user_data[user_id].get('run_state')
+        if not run_state:
+            return
+
+        text = update.message.text or update.message.caption or ''
+        if not text.strip():
+            return
+
+        # Handle cancel command in FSM
+        if text.strip() == '/cancel':
+            await self.cancel_command(update, context)
+            return
+
+        try:
+            if run_state == 'post_text_waiting':
+                # Create text post immediately
+                content = text
+                formatted_content = self.content_generator.generate_content(content, post_type='text')
+                result = await self.binance_api.post_content(formatted_content, post_type='text')
+                post_id = result.get('data', {}).get('id', 'N/A')
+                share_link = result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
+
+                await update.message.reply_text(
+                    f"✅ **Текстовый пост опубликован!** 🎉\n\n"
+                    f"📝 Контент:\n{formatted_content}\n\n"
+                    f"🆔 Post ID: {post_id}\n"
+                    f"🔗 Ссылка: {share_link}"
+                )
+                self.user_data[user_id].pop('run_state', None)
+                logger.info(f"User {username} published text post via /run: {content[:50]}...")
+
+            elif run_state == 'post_photo_waiting_text':
+                # Store text and wait for photo
+                self.user_data[user_id]['pending_image_post'] = text
+                self.user_data[user_id]['pending_images'] = []
+                self.user_data[user_id]['run_state'] = 'post_photo_waiting_photo'
+
+                keyboard = [[InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await update.message.reply_text(
+                    f"📝 Текст принят.\n\n"
+                    f"Теперь пришлите 1-2 фото для поста.",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+                self.user_data[user_id]['run_state'] = 'post_photo_active'
+
+            elif run_state == 'article_waiting_title':
+                # Store title and wait for content
+                self.user_data[user_id]['pending_article'] = {
+                    'title': text.strip(),
+                    'content': '',
+                    'cover_url': None
+                }
+                self.user_data[user_id]['run_state'] = 'article_waiting_content'
+
+                keyboard = [
+                    [InlineKeyboardButton("📝 Добавить текст", callback_data='art_add_text')],
+                    [InlineKeyboardButton("🖼️ Добавить обложку", callback_data='art_add_cover')],
+                    [InlineKeyboardButton("✅ Отправить статью", callback_data='art_send')],
+                    [InlineKeyboardButton("❌ Отмена", callback_data='art_cancel')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await update.message.reply_text(
+                    f"📰 **Заголовок принят:** {text.strip()}\n\n"
+                    f"Теперь пришлите текст статьи (можно несколькими сообщениями).",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+                logger.info(f"User started article creation: {text.strip()}")
+
+            elif run_state == 'article_photo_waiting_title':
+                # Store title for article with photo
+                self.user_data[user_id]['pending_article'] = {
+                    'title': text.strip(),
+                    'content': '',
+                    'cover_url': None
+                }
+                self.user_data[user_id]['run_state'] = 'article_photo_waiting_content'
+
+                keyboard = [
+                    [InlineKeyboardButton("📝 Добавить текст", callback_data='art_add_text')],
+                    [InlineKeyboardButton("🖼️ Добавить обложку", callback_data='art_add_cover')],
+                    [InlineKeyboardButton("✅ Отправить статью", callback_data='art_send')],
+                    [InlineKeyboardButton("❌ Отмена", callback_data='art_cancel')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await update.message.reply_text(
+                    f"📰 **Заголовок принят:** {text.strip()}\n\n"
+                    f"Теперь пришлите текст статьи.",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+
+            elif run_state == 'article_waiting_content' or run_state == 'article_photo_waiting_content':
+                # Append content to article
+                article = self.user_data[user_id]['pending_article']
+                if article.get('content'):
+                    article['content'] += '\n\n' + text
+                else:
+                    article['content'] = text
+
+                cover_status = '🖼️ Обложка: есть' if article.get('cover_url') else '🖼️ Обложки: нет'
+
+                keyboard = [
+                    [InlineKeyboardButton("📝 Добавить текст", callback_data='art_add_text')],
+                    [InlineKeyboardButton("🖼️ Добавить обложку", callback_data='art_add_cover')],
+                    [InlineKeyboardButton("✅ Отправить статью", callback_data='art_send')],
+                    [InlineKeyboardButton("❌ Отмена", callback_data='art_cancel')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                preview = article['content'][:200] + '...' if len(article['content']) > 200 else article['content']
+
+                await update.message.reply_text(
+                    f"📝 Текст добавлен к статье\n\n"
+                    f"📋 Заголовок: {article.get('title', '')}\n\n"
+                    f"📝 Текст ({len(article['content'])} симв.):\n{preview}\n\n"
+                    f"{cover_status}\n\n"
+                    f"Кнопки управления:",
+                    reply_markup=reply_markup
+                )
+
+            elif run_state == 'schedule_waiting_text':
+                # Store content and wait for time
+                self.user_data[user_id]['schedule_content'] = text
+                self.user_data[user_id]['run_state'] = 'schedule_waiting_time'
+
+                await update.message.reply_text(
+                    f"📝 Текст принят.\n\n"
+                    f"Теперь укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n"
+                    f"Примеры: `17:41`, `17:41+1`, `09:00+2`\n\n"
+                    f"Для отмены: /cancel",
+                )
+
+            elif run_state == 'schedule_waiting_time':
+                # Parse time and schedule post
+                time_str = text.strip()
+                scheduled_time = self._parse_time(time_str)
+                if not scheduled_time:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат времени!\n"
+                        f"Используйте ЧЧ:ММ или ЧЧ:ММ+X (например: 17:41+1)\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                content = self.user_data[user_id].pop('schedule_content', '')
+                post_id = await self.scheduler.schedule_post(scheduled_time, content, user_id)
+
+                # Format display time with timezone
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await update.message.reply_text(
+                    f"✅ **Отложенный пост создан!** 🎉\n\n"
+                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Пост опубликуется автоматически.",
+                )
+                self.user_data[user_id].pop('run_state', None)
+                logger.info(f"User scheduled post via /run: {post_id}")
+
+            elif run_state == 'reminder_waiting_type':
+                # Parse reminder: type time [days] message
+                parts = text.split(' ', 3)
+                if len(parts) < 2:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат!\n"
+                        f"Формат: `тип время [дни] сообщение`\n"
+                        f"Пример: `market 14:30+1 BTC price 0,1,2,3,4`\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                reminder_type = parts[0].lower()
+                time = parts[1]
+                days_of_week = None
+                message = ""
+
+                if len(parts) > 2 and parts[2].lower() not in ['task', 'market', 'analysis', 'news', 'general']:
+                    try:
+                        days_of_week = [int(d.strip()) for d in parts[2].split(',')]
+                        if len(parts) > 3:
+                            message = parts[3]
+                    except ValueError:
+                        message = ' '.join(parts[2:])
+                else:
+                    if len(parts) > 2:
+                        message = ' '.join(parts[2:])
+
+                # Parse timezone from time
+                timezone_offset = self.config.timezone_offset
+                if '+' in time:
+                    time_part, tz_part = time.split('+', 1)
+                    try:
+                        tz_offset = int(tz_part)
+                        if tz_offset in [0, 1, 2, 3]:
+                            timezone_offset = tz_offset
+                    except ValueError:
+                        pass
+
+                reminder_id = await self.reminder_manager.add_reminder(
+                    reminder_type=reminder_type,
+                    time=time,
+                    days_of_week=days_of_week,
+                    is_recurring=True,
+                    message=message,
+                    user_id=update.effective_user.id,
+                    timezone_offset=timezone_offset
+                )
+
+                await update.message.reply_text(
+                    f"✅ **Напоминание создано!** 🎉\n\n"
+                    f"🔔 Тип: {reminder_type}\n"
+                    f"⏰ Время: {time}\n"
+                    f"📅 Дни: {days_of_week or 'Каждый день'}\n"
+                    f"💬 Сообщение: {message or '—'}\n"
+                    f"🆔 ID: {reminder_id}\n\n"
+                    f"Напоминание придет в Telegram (не уходит в Binance).",
+                )
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_reminder_step', None)
+                logger.info(f"User created reminder via /run: {reminder_id}")
+
+        except Exception as e:
+            await update.message.reply_text(f"❌ Ошибка: {str(e)}")
+            logger.error(f"Error in run_message_handler: {e}")
+
     def _parse_time(self, time_str: str) -> Optional[datetime]:
         """
         Parse time string in HH:MM format with optional timezone offset.
@@ -2272,6 +2769,8 @@ class BinanceSquareBot:
         application.add_handler(CommandHandler("schedule", self.schedule_command))
         application.add_handler(CommandHandler("status", self.status_command))
         application.add_handler(CommandHandler("key", self.key_command))
+        application.add_handler(CommandHandler("run", self.run_command))
+        application.add_handler(CommandHandler("cancel", self.cancel_command))
 
         # Add reminder command handlers
         application.add_handler(CommandHandler("add_reminder", self.add_reminder_command))
@@ -2280,14 +2779,17 @@ class BinanceSquareBot:
         application.add_handler(CommandHandler("update_reminder", self.update_reminder_command))
         application.add_handler(CommandHandler("trigger_reminder", self.trigger_reminder_command))
 
-        
         # Add message handler for photos
         application.add_handler(MessageHandler(filters.PHOTO, self.handle_photo))
         application.add_handler(CallbackQueryHandler(self.handle_image_callback, pattern='^img_'))
         application.add_handler(CallbackQueryHandler(self.handle_article_callback, pattern='^art_'))
+        application.add_handler(CallbackQueryHandler(self.handle_run_callback, pattern='^run_'))
 
         # Add article text handler
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.article_text_handler))
+
+        # Add run message handler for FSM states
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.run_message_handler))
 
         # Add scheldue command handlers
         application.add_handler(CommandHandler("scheldue", self.scheldue_command))
