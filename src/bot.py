@@ -775,6 +775,7 @@ class BinanceSquareBot:
 
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await update.message.reply_text(message, reply_markup=reply_markup)
+                logger.info(f"Image uploaded for user {username}, images_count={images_count}, keyboard sent")
 
         except Exception as e:
             error_message = f"❌ Ошибка загрузки изображения: {str(e)}\n"
@@ -898,8 +899,12 @@ class BinanceSquareBot:
 
             # Publish the post
             await query.edit_message_text("⏳ Публикую пост...")
-            await self._publish_image_post(user_id, query.message.chat.id, context.bot)
-            logger.info(f"User {username} confirmed and sent image post")
+            try:
+                await self._publish_image_post(user_id, query.message.chat.id, context.bot)
+                logger.info(f"User {username} confirmed and sent image post")
+            except Exception as e:
+                logger.error(f"Error publishing image post: {e}")
+                await query.edit_message_text(f"❌ Ошибка публикации: {str(e)}")
 
     async def article_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
