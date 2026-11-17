@@ -2905,11 +2905,11 @@ class BinanceSquareBot:
         application.add_handler(CallbackQueryHandler(self.handle_article_callback, pattern='^art_'))
         application.add_handler(CallbackQueryHandler(self.handle_run_callback, pattern='^run_'))
 
+        # Add run message handler for FSM states (MUST BE FIRST to catch /run FSM messages)
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.run_message_handler))
+
         # Add article text handler
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.article_text_handler))
-
-        # Add run message handler for FSM states
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.run_message_handler))
 
         # Add scheldue command handlers
         application.add_handler(CommandHandler("scheldue", self.scheldue_command))
