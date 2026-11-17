@@ -682,7 +682,6 @@ class BinanceSquareBot:
             self.user_data[user_id]['pending_image_post'] = caption
             self.user_data[user_id]['pending_images'] = []
             self.user_data[user_id]['run_state'] = 'post_photo_waiting_photo'
-            logger.info(f"Auto-created pending photo post from caption for user {username}")
 
         # Check if user has pending image post
         if not is_article_cover and (user_id not in self.user_data or 'pending_image_post' not in self.user_data[user_id]):
@@ -1156,7 +1155,6 @@ class BinanceSquareBot:
         Owner (ADMIN_USER_ID) always has access regardless of group admin status."""
         # Owner always has access
         admin_user_id = getattr(self.config, 'admin_user_id', None)
-        logger.warning(f"DEBUG _is_user_admin_in_group: user_id={user_id}, admin_user_id={admin_user_id}, match={user_id == int(admin_user_id) if admin_user_id else 'no admin_id'}")
         if admin_user_id:
             try:
                 if user_id == int(admin_user_id):
