@@ -40,16 +40,18 @@ class PostScheduler:
         scheduled_time: datetime,
         content: str,
         user_id: Optional[int] = None,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
+        timezone_offset: int = 0
     ) -> str:
         """
         Schedule a post for future publication.
 
         Args:
-            scheduled_time: When to publish the post
+            scheduled_time: When to publish the post (should be UTC)
             content: Content to post
             user_id: User who scheduled the post
             options: Additional post options
+            timezone_offset: Timezone offset in hours (+0, +1, +2, +3) for display
 
         Returns:
             Post ID
@@ -63,7 +65,8 @@ class PostScheduler:
             'user_id': user_id,
             'status': 'scheduled',
             'created_at': datetime.now(),
-            'options': options or {}
+            'options': options or {},
+            'timezone_offset': timezone_offset
         }
 
         self.scheduled_posts.append(post)
@@ -169,6 +172,9 @@ class PostScheduler:
                 serialized_post['created_at'] = serialized_post['created_at'].isoformat()
                 if 'published_at' in serialized_post:
                     serialized_post['published_at'] = serialized_post['published_at'].isoformat()
+                # Ensure timezone_offset is included
+                if 'timezone_offset' not in serialized_post:
+                    serialized_post['timezone_offset'] = 0
                 serialized_posts.append(serialized_post)
 
             # Save to file
@@ -193,6 +199,9 @@ class PostScheduler:
                     deserialized_post['created_at'] = datetime.fromisoformat(deserialized_post['created_at'])
                     if 'published_at' in deserialized_post:
                         deserialized_post['published_at'] = datetime.fromisoformat(deserialized_post['published_at'])
+                    # Ensure timezone_offset is included (default 0 for backward compatibility)
+                    if 'timezone_offset' not in deserialized_post:
+                        deserialized_post['timezone_offset'] = 0
                     self.scheduled_posts.append(deserialized_post)
 
                 logger.info(f"Loaded {len(self.scheduled_posts)} scheduled posts")

@@ -35,19 +35,21 @@ class ReminderSchedule:
         is_recurring: bool = True,
         message: str = "",
         user_id: Optional[int] = None,
-        reminder_id: Optional[str] = None
+        reminder_id: Optional[str] = None,
+        timezone_offset: int = 0
     ):
         """
         Initialize a reminder schedule.
 
         Args:
             reminder_type: Type of reminder (task, market, analysis, news, general)
-            time: Time in HH:MM format (24-hour)
+            time: Time in HH:MM format (24-hour) in local time with timezone offset
             days_of_week: List of days (0=Monday, 6=Sunday). If None, every day
             is_recurring: Whether the reminder repeats
             message: Custom message for the reminder
             user_id: User who created the reminder
             reminder_id: Unique ID for the reminder
+            timezone_offset: Timezone offset in hours (+0, +1, +2, +3)
         """
         self.reminder_type = reminder_type
         self.time = time
@@ -60,6 +62,7 @@ class ReminderSchedule:
         self.next_triggered = None
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
+        self.timezone_offset = timezone_offset  # Store timezone offset for display
 
     def is_due_today(self) -> bool:
         """
@@ -76,27 +79,31 @@ class ReminderSchedule:
 
     def get_next_trigger(self) -> datetime:
         """
-        Get the next trigger time for this reminder.
+        Get the next trigger time for this reminder (returns UTC time).
 
         Returns:
-            Next trigger datetime
+            Next trigger datetime in UTC
         """
         now = datetime.now()
-        current_time_str = now.strftime('%H:%M')
+        current_day = now.weekday()
 
-        # Parse the reminder time
+        # Parse the reminder time (local time)
         try:
             hour, minute = map(int, self.time.split(':'))
         except ValueError:
             hour, minute = 9, 0  # Default to 9:00 if invalid
 
-        # Check if we should trigger today
-        if self.is_due_today():
-            today_trigger = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        # Create local time for today
+        local_today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-            # If the time has passed today, schedule for tomorrow
-            if today_trigger <= now:
-                today_trigger += timedelta(days=1)
+        # Convert to UTC by subtracting timezone offset
+        utc_today = local_today - timedelta(hours=self.timezone_offset)
+
+        # Check if we should trigger today (in local time)
+        if self.is_due_today():
+            # If the UTC time has passed, schedule for tomorrow
+            if utc_today <= now:
+                utc_today += timedelta(days=1)
 
             # If today is not in the schedule, skip to next scheduled day
             if current_day not in self.days_of_week:
@@ -108,9 +115,9 @@ class ReminderSchedule:
                         days_ahead += 1
                         break
                     days_ahead += 1
-                today_trigger += timedelta(days=days_ahead)
+                utc_today += timedelta(days=days_ahead)
 
-            return today_trigger
+            return utc_today
         else:
             # Find next scheduled day
             days_ahead = 0
@@ -121,9 +128,7 @@ class ReminderSchedule:
                     break
                 days_ahead += 1
 
-            next_trigger = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-            next_trigger += timedelta(days=days_ahead)
-
+            next_trigger = utc_today + timedelta(days=days_ahead)
             return next_trigger
 
     def to_dict(self) -> Dict[str, Any]:
@@ -141,6 +146,7 @@ class ReminderSchedule:
             'message': self.message,
             'user_id': self.user_id,
             'reminder_id': self.reminder_id,
+            'timezone_offset': self.timezone_offset,
             'last_triggered': self.last_triggered.isoformat() if self.last_triggered else None,
             'next_triggered': self.next_triggered.isoformat() if self.next_triggered else None,
             'created_at': self.created_at.isoformat(),
@@ -165,7 +171,8 @@ class ReminderSchedule:
             is_recurring=data['is_recurring'],
             message=data['message'],
             user_id=data['user_id'],
-            reminder_id=data['reminder_id']
+            reminder_id=data['reminder_id'],
+            timezone_offset=data.get('timezone_offset', 0)  # Default to 0 for backward compatibility
         )
 
         if data['last_triggered']:
@@ -206,18 +213,20 @@ class ReminderManager:
         days_of_week: Optional[List[int]] = None,
         is_recurring: bool = True,
         message: str = "",
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
+        timezone_offset: int = 0
     ) -> str:
         """
         Add a new reminder.
 
         Args:
             reminder_type: Type of reminder
-            time: Time in HH:MM format
+            time: Time in HH:MM format (local time with timezone offset)
             days_of_week: Days to trigger (0=Monday, 6=Sunday)
             is_recurring: Whether reminder repeats
             message: Custom message
             user_id: User ID
+            timezone_offset: Timezone offset in hours (+0, +1, +2, +3) for display
 
         Returns:
             Reminder ID
@@ -225,6 +234,10 @@ class ReminderManager:
         # Validate reminder type
         if reminder_type not in self.default_reminder_types:
             reminder_type = 'general'
+
+        # Validate timezone offset
+        if timezone_offset not in [0, 1, 2, 3]:
+            timezone_offset = 0
 
         # Use default message if none provided
         if not message:
@@ -237,7 +250,8 @@ class ReminderManager:
             days_of_week=days_of_week,
             is_recurring=is_recurring,
             message=message,
-            user_id=user_id
+            user_id=user_id,
+            timezone_offset=timezone_offset
         )
 
         # Add to user's reminders

@@ -26,6 +26,7 @@ class Config:
     rate_limit: int = 60
     enable_scheduled_posts: bool = True
     enable_auto_replies: bool = True
+    timezone_offset: int = 0
 
     # Content Configuration
     allowed_hashtags: str = "#crypto,#btc,#eth,#trading,#binance,#square"
@@ -90,6 +91,7 @@ class Config:
             rate_limit=int(os.getenv("RATE_LIMIT", "60")),
             enable_scheduled_posts=os.getenv("ENABLE_SCHEDULED_POSTS", "true").lower() == "true",
             enable_auto_replies=os.getenv("ENABLE_AUTO_REPLIES", "true").lower() == "true",
+            timezone_offset=int(os.getenv("TIMEZONE_OFFSET", "0")),
             allowed_hashtags=os.getenv("ALLOWED_HASHTAGS", "#crypto,#btc,#eth,#trading,#binance,#square"),
             default_post_type=os.getenv("DEFAULT_POST_TYPE", "text"),
             max_memory_usage=int(os.getenv("MAX_MEMORY_USAGE", "512")),

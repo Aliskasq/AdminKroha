@@ -181,7 +181,7 @@ class BinanceSquareBot:
             f"• /post <текст> — Опубликовать текст в Binance Square\n"
             f"• /post_image или /image <текст> — Пост с 1-2 фото (кнопки)\n"
             f"• /article <заголовок> — Статья с обложкой (кнопки)\n"
-            f"• /schedule <время> <текст> — Запланировать пост\n"
+            f"• /schedule <время> <текст> — Запланировать пост (время: ЧЧ:ММ или ЧЧ:ММ+X)\n"
             f"• /scheldue <детали> — Расширенное планирование\n"
             f"• /add_reminder <тип> <время> [дни] [сообщение] — Добавить напоминание\n"
             f"• /list_reminders — Список напоминаний\n"
@@ -191,11 +191,12 @@ class BinanceSquareBot:
             f"• Данные тикеров в реальном времени с подсветкой $SYMBOL\n"
             f"• Загрузка и обработка изображений (до 2 фото на пост)\n"
             f"• Статьи с обложкой (contentType=2)\n"
-            f"• Планирование постов\n"
-            f"• Расширенная система напоминаний\n\n"
+            f"• Планирование постов с таймзонами (+0, +1, +2, +3)\n"
+            f"• Расширенная система напоминаний с таймзонами\n\n"
             f"🔧 Команды для админов:\n"
             f"• /broadcast <текст> — Рассылка (только админ)\n"
-            f"• /logs — Просмотр логов (только админ)\n\n"
+            f"• /logs — Просмотр логов (только админ)\n"
+            f"• /key <новый_ключ> — Сменить Binance API ключ (только админ)\n\n"
             f"⚠️ Важно: Бот ограничен групповыми чатами и администраторами для безопасности.\n\n"
             f"❓ Нужна помощь? Введите любую команду для начала!"
         )
@@ -230,19 +231,22 @@ class BinanceSquareBot:
             f"  /article Заголовок статьи\n"
             f"  Кнопки: Добавить текст / Добавить обложку / Отправить / Отмена\n\n"
             f"⏰ ПЛАНИРОВАНИЕ:\n"
-            f"Отложите пост на будущее:\n"
-            f"  Пример: /schedule 14:30 Анализ на завтра\n\n"
+            f"Отложите пост на будущее (поддержка таймзон +0, +1, +2, +3):\n"
+            f"  Пример: /schedule 14:30 Анализ на завтра\n"
+            f"  Пример с таймзоной: /schedule 14:30+2 Анализ (UTC+2)\n\n"
             f"🚀 РАСШИРЕННОЕ ПЛАНИРОВАНИЕ (/scheldue):\n"
             f"Пост с тикерами и хештегами:\n"
-            f"  Пример: /scheldue 14:30 \"Анализ BTC\" $btc #crypto\n\n"
+            f"  Пример: /scheldue 14:30 \"Анализ BTC\" $btc #crypto\n"
+            f"  Пример с таймзоной: /scheldue 14:30+2 \"Анализ BTC\" $btc #crypto\n\n"
             f"🔔 НАПОМИНАНИЯ:\n"
-            f"Добавьте напоминание с временем и днями:\n"
+            f"Добавьте напоминание с временем и днями (поддержка таймзон):\n"
             f"  Пример: /add_reminder task 09:00 Задачи 0,2,4\n"
-            f"  Пример: /add_reminder market 14:30 BTC $btc 0,1,2,3,4\n\n"
+            f"  Пример с таймзоной: /add_reminder market 14:30+2 BTC $btc 0,1,2,3,4\n\n"
             f"🔧 КОМАНДЫ АДМИНА:\n"
             f"• /status — Статус и статистика бота\n"
             f"• /broadcast <текст> — Рассылка всем пользователям\n"
-            f"• /logs — Просмотр недавних логов\n\n"
+            f"• /logs — Просмотр недавних логов\n"
+            f"• /key <новый_ключ> — Сменить Binance Square API ключ (только админ)\n\n"
             f"📈 СТАТУС БОТА:\n"
             f"• Онлайн и реагирует\n"
             f"• Подключен к Binance Square API\n"
@@ -252,7 +256,8 @@ class BinanceSquareBot:
             f"• Используйте хештеги (#crypto, #btc, #trading) для охвата\n"
             f"• Добавляйте $SYMBOL для авто-подсветки тикеров\n"
             f"• Планируйте посты в пиковые часы\n"
-            f"• Напоминания для регулярных задач\n\n"
+            f"• Напоминания для регулярных задач\n"
+            f"• Используйте таймзоны: ЧЧ:ММ+X где X=0,1,2,3\n\n"
             f"🔒 Безопасность: Бот работает только в группах и для админов.\n\n"
             f"❓ Нужна помощь? Введите любую команду!"
         )
@@ -284,13 +289,15 @@ class BinanceSquareBot:
                 "Использование: /scheldue <время> <детали>\n"
                 "Примеры:\n"
                 "  /scheldue 14:30 \"Вырастет BTC?\" Да Нет Возможно $btc\n"
-                "  /scheldue 09:00 \"Ежедневный анализ\" \"BTC: $45k\" #crypto\n\n"
+                "  /scheldue 09:00 \"Ежедневный анализ\" \"BTC: $45k\" #crypto\n"
+                "  С таймзоной: /scheldue 14:30+2 \"Вырастет BTC?\" Да Нет $btc\n\n"
                 "Детали могут содержать:\n"
                 "  • Вопрос для опроса: \"Вырастет BTC?\"\n"
                 "  • Варианты: Да Нет Возможно\n"
                 "  • Тикеры: $btc $eth $sol (с или без $)\n"
                 "  • Хештеги: #crypto #bitcoin\n"
-                "  • Текст для обычного поста после вариантов"
+                "  • Текст для обычного поста после вариантов\n\n"
+                "Формат времени: ЧЧ:ММ или ЧЧ:ММ+X (X = 0,1,2,3 для таймзоны)"
             )
             return
 
@@ -1653,6 +1660,114 @@ class BinanceSquareBot:
         await update.message.reply_text(status_message)
         logger.info(f"User {username} requested bot status")
 
+    async def key_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle /key command - Change Binance Square API Key (Admin only).
+
+        Args:
+            update: Telegram update object
+            context: Bot context
+        """
+        # Check if user is group admin
+        if not await self.require_group_admin(update, context):
+            return
+
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.first_name
+
+        if not context.args:
+            # Show current key (masked) and usage
+            current_key = self.config.binance_api_key
+            masked_key = current_key[:8] + '*' * (len(current_key) - 16) + current_key[-8:] if len(current_key) > 16 else '*' * len(current_key)
+
+            help_message = (
+                f"🔑 Управление ключом Binance Square API\n\n"
+                f"📋 Текущий ключ: `{masked_key}`\n\n"
+                f"📖 Использование:\n"
+                f"  `/key <новый_ключ>` — Обновить API ключ Binance Square\n\n"
+                f"⚠️ Важно:\n"
+                f"  • Изменяет ключ для ВСЕХ операций с Binance Square\n"
+                f"  • Ключ должен быть валидным OpenAPI ключом Binance Square\n"
+                f"  • Изменения вступают в силу немедленно\n"
+                f"  • Ключ сохраняется в .env для персистентности\n\n"
+                f"🔗 Получить ключ: https://www.binance.com/square/api"
+            )
+            await update.message.reply_text(help_message)
+            return
+
+        new_key = context.args[0].strip()
+
+        # Validate key format (basic validation)
+        if len(new_key) < 10:
+            await update.message.reply_text(
+                "❌ Неверный формат ключа! Ключ слишком короткий.\n"
+                "Укажите валидный OpenAPI ключ Binance Square."
+            )
+            return
+
+        # Update the config
+        old_key = self.config.binance_api_key
+        self.config.binance_api_key = new_key
+
+        # Update the Binance API client
+        self.binance_api.config.binance_api_key = new_key
+
+        # Close existing session to force recreation with new key
+        await self.binance_api.close()
+
+        # Persist to .env file
+        try:
+            await self._update_env_file('BINANCE_API_KEY', new_key)
+            success_msg = (
+                f"✅ Ключ Binance Square API успешно обновлён!\n\n"
+                f"🔑 Старый: `{old_key[:8]}****{old_key[-8:] if len(old_key) > 16 else '****'}`\n"
+                f"🔑 Новый: `{new_key[:8]}****{new_key[-8:]}`\n\n"
+                f"Новый ключ активен и сохранён в .env"
+            )
+            await update.message.reply_text(success_msg)
+            logger.info(f"Admin {username} updated Binance API key")
+        except Exception as e:
+            # Rollback on error
+            self.config.binance_api_key = old_key
+            self.binance_api.config.binance_api_key = old_key
+            await self.binance_api.close()
+            error_msg = f"❌ Не удалось сохранить ключ в .env: {str(e)}\nИзменения откатаны."
+            await update.message.reply_text(error_msg)
+            logger.error(f"Failed to update Binance API key: {e}")
+
+    async def _update_env_file(self, key: str, value: str) -> None:
+        """
+        Update a key in the .env file.
+
+        Args:
+            key: Environment variable name
+            value: New value
+        """
+        import os
+        env_path = '.env'
+
+        # Read existing .env
+        if os.path.exists(env_path):
+            with open(env_path, 'r') as f:
+                lines = f.readlines()
+        else:
+            lines = []
+
+        # Update or add the key
+        key_found = False
+        for i, line in enumerate(lines):
+            if line.startswith(f'{key}='):
+                lines[i] = f'{key}={value}\n'
+                key_found = True
+                break
+
+        if not key_found:
+            lines.append(f'{key}={value}\n')
+
+        # Write back
+        with open(env_path, 'w') as f:
+            f.writelines(lines)
+
     async def schedule_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle /schedule command.
@@ -1674,7 +1789,8 @@ class BinanceSquareBot:
         if len(parts) < 3:
             await update.message.reply_text(
                 "❌ Укажите время и контент!\n"
-                "Пример: /schedule 14:30 Анализ на завтра"
+                "Пример: /schedule 14:30 Анализ на завтра\n"
+                "Пример с таймзоной: /schedule 14:30+2 Анализ (UTC+2)"
             )
             return
 
@@ -1687,7 +1803,8 @@ class BinanceSquareBot:
             if not scheduled_time:
                 await update.message.reply_text(
                     "❌ Неверный формат времени! Используйте ЧЧ:ММ (24 часа)\n"
-                    "Пример: /schedule 14:30 Анализ на завтра"
+                    "Пример: /schedule 14:30 Анализ на завтра\n"
+                    "Пример с таймзоной: /schedule 14:30+2 Анализ (UTC+2)"
                 )
                 return
 
@@ -1744,8 +1861,10 @@ class BinanceSquareBot:
                 "Примеры:\n"
                 "  /add_reminder task 09:00 Проверить задачи\n"
                 "  /add_reminder market 14:30 Цена BTC #crypto\n"
-                "  /add_reminder analysis 19:00 Конец торговой сессии\n\n"
-                "Типы: task, market, analysis, news, general"
+                "  /add_reminder analysis 19:00 Конец торговой сессии\n"
+                "  С таймзоной: /add_reminder market 14:30+2 Цена BTC 0,1,2,3,4\n\n"
+                "Типы: task, market, analysis, news, general\n"
+                "Формат времени: ЧЧ:ММ или ЧЧ:ММ+X (X = 0,1,2,3 для таймзоны)"
             )
             return
 
@@ -1755,6 +1874,18 @@ class BinanceSquareBot:
         time = args[1] if len(args) > 1 else "09:00"
         days_of_week = None
         message = ""
+
+        # Parse timezone offset from time string
+        timezone_offset = self.config.timezone_offset
+        if '+' in time:
+            time_part, tz_part = time.split('+', 1)
+            try:
+                tz_offset = int(tz_part)
+                if tz_offset in [0, 1, 2, 3]:
+                    timezone_offset = tz_offset
+                    time = time_part  # Use time part without offset for storage
+            except ValueError:
+                pass  # Use default timezone_offset
 
         # Parse days of week if provided
         if len(args) > 2 and args[2].lower() not in ['task', 'market', 'analysis', 'news', 'general']:
@@ -1778,7 +1909,8 @@ class BinanceSquareBot:
                 days_of_week=days_of_week,
                 is_recurring=True,
                 message=message,
-                user_id=user_id
+                user_id=user_id,
+                timezone_offset=timezone_offset
             )
 
             # Get day names for display
@@ -2073,26 +2205,54 @@ class BinanceSquareBot:
 
     def _parse_time(self, time_str: str) -> Optional[datetime]:
         """
-        Parse time string in HH:MM format.
+        Parse time string in HH:MM format with optional timezone offset.
+
+        Supported formats:
+        - HH:MM (uses config timezone_offset, default +0)
+        - HH:MM+X where X is 0, 1, 2, or 3 (explicit timezone offset)
+
+        Examples:
+        - "14:30" - uses config timezone_offset
+        - "14:30+2" - UTC+2
+        - "09:00+0" - UTC+0
 
         Args:
-            time_str: Time string in HH:MM format
+            time_str: Time string in HH:MM or HH:MM+X format
 
         Returns:
-            Parsed datetime object or None if invalid
+            Parsed datetime object (UTC) or None if invalid
         """
         try:
-            hour, minute = map(int, time_str.split(':'))
+            # Parse timezone offset if present
+            timezone_offset = self.config.timezone_offset
+
+            if '+' in time_str:
+                time_part, tz_part = time_str.split('+', 1)
+                try:
+                    tz_offset = int(tz_part)
+                    if tz_offset not in [0, 1, 2, 3]:
+                        logger.warning(f"Invalid timezone offset: +{tz_offset}, using config default +{timezone_offset}")
+                    else:
+                        timezone_offset = tz_offset
+                except ValueError:
+                    logger.warning(f"Invalid timezone format in {time_str}, using config default +{timezone_offset}")
+            else:
+                time_part = time_str
+
+            hour, minute = map(int, time_part.split(':'))
             if not (0 <= hour <= 23 and 0 <= minute <= 59):
                 return None
 
-            # Schedule for today at the specified time
+            # Schedule for today at the specified time (local time with offset)
+            # Convert to UTC by subtracting the offset
             scheduled_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+            scheduled_time = scheduled_time - timedelta(hours=timezone_offset)
 
             # If the time has already passed today, schedule for tomorrow
             if scheduled_time <= datetime.now():
                 scheduled_time += timedelta(days=1)
 
+            logger.debug(f"Parsed time: {time_str} -> UTC: {scheduled_time} (offset: +{timezone_offset})")
             return scheduled_time
         except ValueError:
             return None
@@ -2111,6 +2271,7 @@ class BinanceSquareBot:
         application.add_handler(CommandHandler("article", self.article_command))
         application.add_handler(CommandHandler("schedule", self.schedule_command))
         application.add_handler(CommandHandler("status", self.status_command))
+        application.add_handler(CommandHandler("key", self.key_command))
 
         # Add reminder command handlers
         application.add_handler(CommandHandler("add_reminder", self.add_reminder_command))
