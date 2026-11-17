@@ -1037,6 +1037,10 @@ class BinanceSquareBot:
         username = query.from_user.username or query.from_user.first_name
         callback_data = query.data
 
+        # Initialize user_data if not exists
+        if user_id not in self.user_data:
+            self.user_data[user_id] = {}
+
         if callback_data == 'run_cancel':
             await query.edit_message_text("❌ Меню закрыто.")
             return
