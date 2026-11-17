@@ -665,15 +665,24 @@ class BinanceSquareBot:
                            'pending_article' in self.user_data[user_id] and
                            self.user_data[user_id].get('pending_article', {}).get('cover_pending', False))
 
+        caption = update.message.caption or ''
+
         # Support photo with caption as text for /run photo post flow
         run_state = self.user_data.get(user_id, {}).get('run_state')
         if not is_article_cover and run_state == 'post_photo_waiting_text':
             # Photo with caption sent instead of separate text message
-            caption = update.message.caption or ''
             self.user_data.setdefault(user_id, {})
             self.user_data[user_id]['pending_image_post'] = caption
             self.user_data[user_id]['pending_images'] = []
             self.user_data[user_id]['run_state'] = 'post_photo_waiting_photo'
+
+        # Auto-create pending state if photo with caption but no pending state (race condition fix)
+        if not is_article_cover and caption and (user_id not in self.user_data or 'pending_image_post' not in self.user_data[user_id]):
+            self.user_data.setdefault(user_id, {})
+            self.user_data[user_id]['pending_image_post'] = caption
+            self.user_data[user_id]['pending_images'] = []
+            self.user_data[user_id]['run_state'] = 'post_photo_waiting_photo'
+            logger.info(f"Auto-created pending photo post from caption for user {username}")
 
         # Check if user has pending image post
         if not is_article_cover and (user_id not in self.user_data or 'pending_image_post' not in self.user_data[user_id]):
