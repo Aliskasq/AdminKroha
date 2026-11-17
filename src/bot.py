@@ -1036,15 +1036,56 @@ class BinanceSquareBot:
             logger.info(f"User {username} requested to add cover to article")
 
         elif callback_data == 'art_send':
-            # User confirmed - publish the article
+            # User confirmed - schedule the article based on pre-set schedule
             if not article.get('content', '').strip():
                 await query.edit_message_text("❌ Текст статьи пуст! Добавьте текст перед отправкой.")
                 return
 
-            # Publish the article
-            await query.edit_message_text("⏳ Публикую статью...")
-            await self._publish_article_post(user_id, query.message.chat.id, context.bot)
-            logger.info(f"User {username} confirmed and sent article")
+            # Determine scheduled time based on pre-set schedule
+            schedule_type = self.user_data[user_id].get('run_article_schedule', 'today')
+
+            if schedule_type == 'today':
+                # Schedule for today at 00:00 UTC+0
+                scheduled_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                if scheduled_time <= datetime.now():
+                    scheduled_time += timedelta(days=1)
+                # Convert to UTC (timezone_offset is 0 for UTC+0)
+                scheduled_time = scheduled_time - timedelta(hours=self.config.timezone_offset)
+                schedule_desc = "сегодня в 00:00 UTC+0"
+            else:  # 'tomorrow'
+                # Schedule for tomorrow at 00:00 UTC+0
+                scheduled_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                scheduled_time = scheduled_time - timedelta(hours=self.config.timezone_offset)
+                schedule_desc = "завтра в 00:00 UTC+0"
+
+            # Schedule the article
+            post_id = await self.scheduler.schedule_post(
+                scheduled_time,
+                article.get('content', ''),
+                user_id,
+                options={
+                    'type': 'article',
+                    'title': article.get('title', ''),
+                    'cover_url': article.get('cover_url')
+                },
+                timezone_offset=self.config.timezone_offset
+            )
+
+            # Clear pending state
+            self.user_data[user_id].pop('pending_article', None)
+            self.user_data[user_id].pop('pending_images', None)
+            self.user_data[user_id].pop('run_article_type', None)
+            self.user_data[user_id].pop('run_article_schedule', None)
+
+            await query.edit_message_text(
+                f"✅ **Статья запланирована!** 🎉\n\n"
+                f"📋 Заголовок: {article.get('title', '')}\n"
+                f"🖼️ Обложка: {'Да' if article.get('cover_url') else 'Нет'}\n\n"
+                f"⏰ Время публикации: {schedule_desc}\n"
+                f"🆔 ID: {post_id}\n\n"
+                f"Статья опубликуется автоматически."
+            )
+            logger.info(f"User {username} scheduled article via /run: {post_id}")
 
     async def handle_run_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -1091,28 +1132,31 @@ class BinanceSquareBot:
             )
             logger.info(f"User {username} started photo post creation via /run")
 
-        elif callback_data == 'run_article':
-            # Start article creation (text only) - with scheduling
+        elif callback_data == 'run_article_today':
+            # Start article creation for today (before 00:00 UTC+0)
             self.user_data[user_id]['run_state'] = 'article_waiting_title'
-            self.user_data[user_id]['run_article_type'] = 'text_only'
-            await query.edit_message_text(
-                f"📰 **Создание статьи**\n\n"
-                f"Шаг 1/3: Пришлите заголовок статьи:\n\n"
-                f"Для отмены: /cancel",
-            )
-            logger.info(f"User {username} started article creation via /run")
-
-        elif callback_data == 'run_article_photo':
-            # Start article with photo - with scheduling
-            self.user_data[user_id]['run_state'] = 'article_photo_waiting_title'
             self.user_data[user_id]['run_article_type'] = 'with_photo'
+            self.user_data[user_id]['run_article_schedule'] = 'today'
             await query.edit_message_text(
-                f"📰 **Создание статьи с фото**\n\n"
+                f"📰 **Создание статьи (сегодня до 00:00 UTC+0)**\n\n"
                 f"Шаг 1/3: Пришлите заголовок статьи:\n\n"
-                f"Потом текст, потом обложка, потом время.\n\n"
+                f"Потом текст, потом обложка (опционально).\n\n"
                 f"Для отмены: /cancel",
             )
-            logger.info(f"User {username} started article with photo creation via /run")
+            logger.info(f"User {username} started article creation (today) via /run")
+
+        elif callback_data == 'run_article_tomorrow':
+            # Start article with scheduling for tomorrow
+            self.user_data[user_id]['run_state'] = 'article_waiting_title'
+            self.user_data[user_id]['run_article_type'] = 'with_photo'
+            self.user_data[user_id]['run_article_schedule'] = 'tomorrow'
+            await query.edit_message_text(
+                f"📰 **Создание статьи (завтра после 00:00 UTC+0)**\n\n"
+                f"Шаг 1/3: Пришлите заголовок статьи:\n\n"
+                f"Потом текст, потом обложка (опционально).\n\n"
+                f"Для отмены: /cancel",
+            )
+            logger.info(f"User {username} started article creation (tomorrow) via /run")
 
         elif callback_data == 'run_schedule':
             # Start scheduled post creation
@@ -1979,8 +2023,8 @@ class BinanceSquareBot:
                 InlineKeyboardButton("🖼 Пост с фото", callback_data='run_post_photo'),
             ],
             [
-                InlineKeyboardButton("📰 Статья", callback_data='run_article'),
-                InlineKeyboardButton("📰 Статья с фото", callback_data='run_article_photo'),
+                InlineKeyboardButton("📰 Статья (сегодня до 00:00 UTC+0)", callback_data='run_article_today'),
+                InlineKeyboardButton("📰 Статья (завтра после 00:00 UTC+0)", callback_data='run_article_tomorrow'),
             ],
             [
                 InlineKeyboardButton("⏰ Отложенный пост", callback_data='run_schedule'),
@@ -1998,8 +2042,8 @@ class BinanceSquareBot:
             f"Выберите действие:\n\n"
             f"📝 **Текстовый пост** — сразу публикуется в Binance\n"
             f"🖼 **Пост с фото** — текст + 1-2 фото\n"
-            f"📰 **Статья** — длинный пост с обложкой (contentType=2)\n"
-            f"📰 **Статья с фото** — статья + обложка\n"
+            f"📰 **Статья (сегодня до 00:00 UTC+0)** — статья в отложку на сегодня\n"
+            f"📰 **Статья (завтра после 00:00 UTC+0)** — статья в отложку на завтра\n"
             f"⏰ **Отложенный пост** — текст + время (ЧЧ:ММ или ЧЧ:ММ+X)\n"
             f"📋 **Мои отложенные** — просмотр и удаление запланированных постов\n"
             f"🔔 **Напоминание** — только в Telegram (для сотрудников)\n\n"
@@ -2872,9 +2916,11 @@ class BinanceSquareBot:
             scheduled_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
             scheduled_time = scheduled_time - timedelta(hours=timezone_offset)
 
-            # If the time has already passed today, schedule for tomorrow
-            if scheduled_time <= datetime.now():
-                scheduled_time += timedelta(days=1)
+            # NOTE: Do NOT auto-advance to tomorrow if time has passed.
+            # User explicitly set a time - respect it even if in the past (will post ASAP).
+            # If user wants tomorrow, they should specify tomorrow's date or use tomorrow's time.
+            # if scheduled_time <= datetime.now():
+            #     scheduled_time += timedelta(days=1)
 
             logger.debug(f"Parsed time: {time_str} -> UTC: {scheduled_time} (offset: +{timezone_offset})")
             return scheduled_time
