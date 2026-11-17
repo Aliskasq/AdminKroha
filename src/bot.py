@@ -1134,10 +1134,22 @@ class BinanceSquareBot:
                 return False
             chat_id = int(self.config.telegram_group_id)
             member = await self.bot.get_chat_member(chat_id, user_id)
-            return member.status in ['administrator', 'creator']
+            if member.status in ['administrator', 'creator']:
+                return True
         except Exception as e:
             logger.error(f"Error checking admin status: {e}")
-            return False
+
+        # Fallback: check against ADMIN_USER_ID from config
+        admin_user_id = getattr(self.config, 'admin_user_id', None)
+        if admin_user_id:
+            try:
+                admin_id = int(admin_user_id)
+                if user_id == admin_id:
+                    logger.warning(f"Fallback to ADMIN_USER_ID check: user {user_id} is admin")
+                    return True
+            except (ValueError, TypeError):
+                pass
+        return False
 
     async def _show_scheduled_posts(self, query, user_id: int):
         """Show scheduled posts with delete buttons."""
