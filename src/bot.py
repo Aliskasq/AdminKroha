@@ -1036,56 +1036,29 @@ class BinanceSquareBot:
             logger.info(f"User {username} requested to add cover to article")
 
         elif callback_data == 'art_send':
-            # User confirmed - schedule the article based on pre-set schedule
+            # User confirmed - ask for time input with timezone
             if not article.get('content', '').strip():
                 await query.edit_message_text("❌ Текст статьи пуст! Добавьте текст перед отправкой.")
                 return
 
-            # Determine scheduled time based on pre-set schedule
+            # Set state to wait for time input with timezone
             schedule_type = self.user_data[user_id].get('run_article_schedule', 'today')
 
             if schedule_type == 'today':
-                # Schedule for today at 00:00 UTC+0
-                scheduled_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                if scheduled_time <= datetime.now():
-                    scheduled_time += timedelta(days=1)
-                # Convert to UTC (timezone_offset is 0 for UTC+0)
-                scheduled_time = scheduled_time - timedelta(hours=self.config.timezone_offset)
-                schedule_desc = "сегодня в 00:00 UTC+0"
+                self.user_data[user_id]['run_state'] = 'article_today_waiting_time'
+                time_prompt = "сегодня"
             else:  # 'tomorrow'
-                # Schedule for tomorrow at 00:00 UTC+0
-                scheduled_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-                scheduled_time = scheduled_time - timedelta(hours=self.config.timezone_offset)
-                schedule_desc = "завтра в 00:00 UTC+0"
-
-            # Schedule the article
-            post_id = await self.scheduler.schedule_post(
-                scheduled_time,
-                article.get('content', ''),
-                user_id,
-                options={
-                    'type': 'article',
-                    'title': article.get('title', ''),
-                    'cover_url': article.get('cover_url')
-                },
-                timezone_offset=self.config.timezone_offset
-            )
-
-            # Clear pending state
-            self.user_data[user_id].pop('pending_article', None)
-            self.user_data[user_id].pop('pending_images', None)
-            self.user_data[user_id].pop('run_article_type', None)
-            self.user_data[user_id].pop('run_article_schedule', None)
+                self.user_data[user_id]['run_state'] = 'article_tomorrow_waiting_time'
+                time_prompt = "завтра"
 
             await query.edit_message_text(
-                f"✅ **Статья запланирована!** 🎉\n\n"
-                f"📋 Заголовок: {article.get('title', '')}\n"
-                f"🖼️ Обложка: {'Да' if article.get('cover_url') else 'Нет'}\n\n"
-                f"⏰ Время публикации: {schedule_desc}\n"
-                f"🆔 ID: {post_id}\n\n"
-                f"Статья опубликуется автоматически."
+                f"⏰ **Укажите время публикации** ({time_prompt})\n\n"
+                f"Введите время с поясом:\n"
+                f"Примеры: `15:30+0`, `15:31+1`, `16:20+2`, `01:20+3`\n\n"
+                f"Формат: `ЧЧ:ММ+X` где X = 0, 1, 2, 3 (пояс UTC)\n\n"
+                f"Для отмены: /cancel",
             )
-            logger.info(f"User {username} scheduled article via /run: {post_id}")
+            logger.info(f"User {username} requested time input for article ({schedule_type})")
 
     async def handle_run_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -3029,6 +3002,95 @@ class BinanceSquareBot:
                     user_id,
                     options={'type': 'article', 'title': title}
                 )
+
+            elif run_state == 'article_today_waiting_time':
+                # Parse time and schedule article for today
+                time_str = text.strip()
+                scheduled_time = self._parse_time(time_str)
+                if not scheduled_time:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат времени!\n"
+                        f"Используйте ЧЧ:ММ или ЧЧ:ММ+X (например: 17:41+1)\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                article = self.user_data[user_id].pop('pending_article', {})
+                title = article.get('title', '')
+                content = article.get('content', '')
+                cover_url = article.get('cover_url')
+
+                # Schedule the article for today
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
+                    content,
+                    user_id,
+                    options={'type': 'article', 'title': title, 'cover_url': cover_url}
+                )
+
+                # Format display time with timezone
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await update.message.reply_text(
+                    f"✅ **Отложенная статья создана!** 🎉\n\n"
+                    f"📋 Заголовок: {title}\n"
+                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+                    f"🖼️ Обложка: {'Да' if cover_url else 'Нет'}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Статья опубликуется автоматически."
+                )
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_article_type', None)
+                self.user_data[user_id].pop('run_article_schedule', None)
+                logger.info(f"User scheduled article (today) via /run: {post_id}")
+
+            elif run_state == 'article_tomorrow_waiting_time':
+                # Parse time and schedule article for tomorrow
+                time_str = text.strip()
+                scheduled_time = self._parse_time(time_str)
+                if not scheduled_time:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат времени!\n"
+                        f"Используйте ЧЧ:ММ или ЧЧ:ММ+X (например: 17:41+1)\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                article = self.user_data[user_id].pop('pending_article', {})
+                title = article.get('title', '')
+                content = article.get('content', '')
+                cover_url = article.get('cover_url')
+
+                # Schedule for tomorrow at specified time
+                scheduled_time += timedelta(days=1)
+
+                # Schedule the article for tomorrow
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
+                    content,
+                    user_id,
+                    options={'type': 'article', 'title': title, 'cover_url': cover_url}
+                )
+
+                # Format display time with timezone
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await update.message.reply_text(
+                    f"✅ **Отложенная статья создана!** 🎉\n\n"
+                    f"📋 Заголовок: {title}\n"
+                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+                    f"🖼️ Обложка: {'Да' if cover_url else 'Нет'}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Статья опубликуется автоматически."
+                )
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_article_type', None)
+                self.user_data[user_id].pop('run_article_schedule', None)
+                logger.info(f"User scheduled article (tomorrow) via /run: {post_id}")
 
             elif run_state == 'article_today_waiting_time':
                 # Parse time and schedule article for today
