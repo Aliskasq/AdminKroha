@@ -1226,7 +1226,7 @@ class BinanceSquareBot:
             logger.info(f"User {username} chose text post (today) via /run")
 
         elif callback_data == 'run_post_text_tomorrow':
-            self.user_data[user_id]['run_state'] = 'post_text_waiting'
+            self.user_data[user_id]['run_state'] = 'post_text_scheduled_waiting_time'
             self.user_data[user_id]['run_post_schedule'] = 'tomorrow'
             await query.edit_message_text(
                 f"📝 **Текстовый пост — Завтра**\n\n"
