@@ -1145,14 +1145,14 @@ class BinanceSquareBot:
             logger.info(f"User {username} started photo post creation via /run")
 
         elif callback_data == 'run_article_today':
-            # Start article creation for today (before 00:00 UTC+0)
+            # Start article creation for today - ask for time
             self.user_data[user_id]['run_state'] = 'article_waiting_title'
             self.user_data[user_id]['run_article_type'] = 'with_photo'
             self.user_data[user_id]['run_article_schedule'] = 'today'
             await query.edit_message_text(
-                f"📰 **Создание статьи (сегодня до 00:00 UTC+0)**\n\n"
+                f"📰 **Создание статьи (сегодня)**\n\n"
                 f"Шаг 1/3: Пришлите заголовок статьи:\n\n"
-                f"Потом текст, потом обложка (опционально).\n\n"
+                f"Потом текст, потом обложка (опционально), потом время.\n\n"
                 f"Для отмены: /cancel",
             )
             logger.info(f"User {username} started article creation (today) via /run")
@@ -1163,9 +1163,9 @@ class BinanceSquareBot:
             self.user_data[user_id]['run_article_type'] = 'with_photo'
             self.user_data[user_id]['run_article_schedule'] = 'tomorrow'
             await query.edit_message_text(
-                f"📰 **Создание статьи (завтра после 00:00 UTC+0)**\n\n"
+                f"📰 **Создание статьи (завтра)**\n\n"
                 f"Шаг 1/3: Пришлите заголовок статьи:\n\n"
-                f"Потом текст, потом обложка (опционально).\n\n"
+                f"Потом текст, потом обложка (опционально), потом время.\n\n"
                 f"Для отмены: /cancel",
             )
             logger.info(f"User {username} started article creation (tomorrow) via /run")
@@ -1242,23 +1242,23 @@ class BinanceSquareBot:
             logger.info(f"User {username} chose scheduled text post")
 
         elif callback_data == 'run_post_text_today':
-            self.user_data[user_id]['run_state'] = 'post_text_waiting'
+            self.user_data[user_id]['run_state'] = 'post_text_scheduled_waiting_time'
             self.user_data[user_id]['run_post_schedule'] = 'today'
             await query.edit_message_text(
                 f"📝 **Текстовый пост — Сегодня**\n\n"
-                f"Пришлите текст поста (поддерживается Markdown, хештеги #, тикеры $):\n\n"
-                f"Максимум 1100 символов.\n\n"
+                f"Укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n\n"
+                f"Примеры: `15:30`, `15:30+0`, `15:31+1`, `16:20+2`, `01:20+3`\n\n"
                 f"Для отмены: /cancel",
             )
-            logger.info(f"User {username} started text post (today) via /run")
+            logger.info(f"User {username} chose text post (today) via /run")
 
         elif callback_data == 'run_post_text_tomorrow':
             self.user_data[user_id]['run_state'] = 'post_text_waiting'
             self.user_data[user_id]['run_post_schedule'] = 'tomorrow'
             await query.edit_message_text(
                 f"📝 **Текстовый пост — Завтра**\n\n"
-                f"Пришлите текст поста (поддерживается Markdown, хештеги #, тикеры $):\n\n"
-                f"Максимум 1100 символов.\n\n"
+                f"Укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n\n"
+                f"Примеры: `15:30`, `15:30+0`, `15:31+1`, `16:20+2`, `01:20+3`\n\n"
                 f"Для отмены: /cancel",
             )
             logger.info(f"User {username} started text post (tomorrow) via /run")
@@ -1293,12 +1293,12 @@ class BinanceSquareBot:
             logger.info(f"User {username} chose scheduled photo post")
 
         elif callback_data == 'run_post_photo_today':
-            self.user_data[user_id]['run_state'] = 'post_photo_waiting_text'
+            self.user_data[user_id]['run_state'] = 'post_photo_scheduled_waiting_time'
             self.user_data[user_id]['run_post_schedule'] = 'today'
             await query.edit_message_text(
                 f"🖼 **Пост с фото — Сегодня**\n\n"
-                f"Шаг 1/2: Пришлите текст поста (поддерживается Markdown):\n\n"
-                f"После текста пришлите 1-2 фото.\n\n"
+                f"Укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n\n"
+                f"Примеры: `15:30`, `15:30+0`, `15:31+1`, `16:20+2`, `01:20+3`\n\n"
                 f"Для отмены: /cancel",
             )
             logger.info(f"User {username} started photo post (today) via /run")
@@ -1308,8 +1308,8 @@ class BinanceSquareBot:
             self.user_data[user_id]['run_post_schedule'] = 'tomorrow'
             await query.edit_message_text(
                 f"🖼 **Пост с фото — Завтра**\n\n"
-                f"Шаг 1/2: Пришлите текст поста (поддерживается Markdown):\n\n"
-                f"После текста пришлите 1-2 фото.\n\n"
+                f"Укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n\n"
+                f"Примеры: `15:30`, `15:30+0`, `15:31+1`, `16:20+2`, `01:20+3`\n\n"
                 f"Для отмены: /cancel",
             )
             logger.info(f"User {username} started photo post (tomorrow) via /run")
@@ -2798,14 +2798,102 @@ class BinanceSquareBot:
                         f"Для отмены: /cancel",
                     )
 
+            elif run_state == 'post_text_scheduled_waiting_time':
+                # Parse time and schedule text post
+                time_str = text.strip()
+                scheduled_time = self._parse_time(time_str)
+                if not scheduled_time:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат времени!\n"
+                        f"Используйте ЧЧ:ММ или ЧЧ:ММ+X (например: 17:41+1)\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                content = text
+                schedule_type = self.user_data[user_id].pop('run_post_schedule', 'today')
+
+                if schedule_type == 'today':
+                    # Schedule for today at specified time
+                    pass  # _parse_time already handles the time
+                else:  # tomorrow
+                    # Add one day
+                    scheduled_time += timedelta(days=1)
+
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
+                    content,
+                    user_id,
+                    timezone_offset=self.config.timezone_offset
+                )
+
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await update.message.reply_text(
+                    f"✅ **Отложенный текстовый пост создан!** 🎉\n\n"
+                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Пост опубликуется автоматически."
+                )
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_post_schedule', None)
+                logger.info(f"User scheduled text post via /run: {post_id}")
+
+            elif run_state == 'post_photo_scheduled_waiting_time':
+                # Parse time and schedule photo post
+                time_str = text.strip()
+                scheduled_time = self._parse_time(time_str)
+                if not scheduled_time:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат времени!\n"
+                        f"Используйте ЧЧ:ММ или ЧЧ:ММ+X (например: 17:41+1)\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                text_content = self.user_data[user_id].pop('pending_image_post', '')
+                images = self.user_data[user_id].pop('pending_images', [])
+                schedule_type = self.user_data[user_id].pop('run_post_schedule', 'today')
+
+                if schedule_type == 'today':
+                    pass  # _parse_time already handles the time
+                else:  # tomorrow
+                    scheduled_time += timedelta(days=1)
+
+                # Post to Binance with images
+                formatted_content = self.content_generator.generate_content(
+                    text_content,
+                    post_type='image'
+                )
+
+                result = await self.binance_api.post_content(
+                    formatted_content,
+                    post_type='image',
+                    image_list=images[:2]
+                )
+
+                post_id = result.get('data', {}).get('id', 'N/A')
+                share_link = result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
+
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await update.message.reply_text(
+                    f"✅ **Отложенный пост с фото создан!** 🎉\n\n"
+                    f"📝 Контент: {text_content[:100]}{'...' if len(text_content) > 100 else ''}\n"
+                    f"🖼️ Изображений: {len(images)}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Пост опубликуется автоматически."
+                )
+
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_post_schedule', None)
+                logger.info(f"User scheduled photo post via /run: {post_id}")
+
             elif run_state == 'article_waiting_title':
-                # Store title and wait for content
-                self.user_data[user_id]['pending_article'] = {
-                    'title': text.strip(),
-                    'content': '',
-                    'cover_url': None
-                }
-                self.user_data[user_id]['run_state'] = 'article_waiting_content'
 
                 keyboard = [
                     [InlineKeyboardButton("📝 Добавить текст", callback_data='art_add_text')],
@@ -2919,7 +3007,7 @@ class BinanceSquareBot:
                 logger.info(f"User scheduled post via /run: {post_id}")
 
             elif run_state == 'article_waiting_time':
-                # Parse time and schedule article (text only)
+                # Parse time and schedule article (text only) - legacy
                 time_str = text.strip()
                 scheduled_time = self._parse_time(time_str)
                 if not scheduled_time:
@@ -2941,6 +3029,95 @@ class BinanceSquareBot:
                     user_id,
                     options={'type': 'article', 'title': title}
                 )
+
+            elif run_state == 'article_today_waiting_time':
+                # Parse time and schedule article for today
+                time_str = text.strip()
+                scheduled_time = self._parse_time(time_str)
+                if not scheduled_time:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат времени!\n"
+                        f"Используйте ЧЧ:ММ или ЧЧ:ММ+X (например: 17:41+1)\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                article = self.user_data[user_id].pop('pending_article', {})
+                title = article.get('title', '')
+                content = article.get('content', '')
+                cover_url = article.get('cover_url')
+
+                # Schedule the article for today
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
+                    content,
+                    user_id,
+                    options={'type': 'article', 'title': title, 'cover_url': cover_url}
+                )
+
+                # Format display time with timezone
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await update.message.reply_text(
+                    f"✅ **Отложенная статья создана!** 🎉\n\n"
+                    f"📋 Заголовок: {title}\n"
+                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+                    f"🖼️ Обложка: {'Да' if cover_url else 'Нет'}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Статья опубликуется автоматически."
+                )
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_article_type', None)
+                self.user_data[user_id].pop('run_article_schedule', None)
+                logger.info(f"User scheduled article (today) via /run: {post_id}")
+
+            elif run_state == 'article_tomorrow_waiting_time':
+                # Parse time and schedule article for tomorrow
+                time_str = text.strip()
+                scheduled_time = self._parse_time(time_str)
+                if not scheduled_time:
+                    await update.message.reply_text(
+                        f"❌ Неверный формат времени!\n"
+                        f"Используйте ЧЧ:ММ или ЧЧ:ММ+X (например: 17:41+1)\n\n"
+                        f"Попробуйте снова или /cancel"
+                    )
+                    return
+
+                article = self.user_data[user_id].pop('pending_article', {})
+                title = article.get('title', '')
+                content = article.get('content', '')
+                cover_url = article.get('cover_url')
+
+                # Schedule for tomorrow at specified time
+                scheduled_time += timedelta(days=1)
+
+                # Schedule the article for tomorrow
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
+                    content,
+                    user_id,
+                    options={'type': 'article', 'title': title, 'cover_url': cover_url}
+                )
+
+                # Format display time with timezone
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await update.message.reply_text(
+                    f"✅ **Отложенная статья создана!** 🎉\n\n"
+                    f"📋 Заголовок: {title}\n"
+                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+                    f"🖼️ Обложка: {'Да' if cover_url else 'Нет'}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Статья опубликуется автоматически."
+                )
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_article_type', None)
+                self.user_data[user_id].pop('run_article_schedule', None)
+                logger.info(f"User scheduled article (tomorrow) via /run: {post_id}")
 
                 # Format display time with timezone
                 tz_offset = self.config.timezone_offset
