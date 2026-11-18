@@ -467,20 +467,28 @@ class ReminderManager:
         Args:
             reminder: Reminder to schedule
         """
+        logger.info(f"Scheduling reminder {reminder.reminder_id} for user {reminder.user_id} at {reminder.get_next_trigger()}")
+
         # Cancel existing timer
         if reminder.reminder_id in self.active_timers:
             self.active_timers[reminder.reminder_id].cancel()
+            logger.info(f"Cancelled existing timer for reminder {reminder.reminder_id}")
 
         # Schedule new reminder
         next_trigger = reminder.get_next_trigger()
         now = datetime.now()
 
+        logger.info(f"Reminder {reminder.reminder_id}: next_trigger={next_trigger}, now={now}, offset={reminder.timezone_offset}")
+
         if next_trigger > now:
-            delay = (next_trigger - now).total_seconds()
+            delay = (next_trigger - datetime.now()).total_seconds()
+            logger.info(f"Scheduling reminder {reminder.reminder_id} in {delay:.0f} seconds")
             task = asyncio.create_task(self._reminder_task(reminder.reminder_id, delay))
             self.active_timers[reminder.reminder_id] = task
+            logger.info(f"Created task for reminder {reminder.reminder_id}")
         else:
             # Trigger immediately if past due
+            logger.info(f"Reminder {reminder.reminder_id} is past due, triggering immediately")
             asyncio.create_task(self._send_reminder_message(reminder))
 
     async def _reminder_task(self, reminder_id: str, delay: float):
@@ -491,12 +499,23 @@ class ReminderManager:
             reminder_id: Reminder ID
             delay: Delay in seconds
         """
-        await asyncio.sleep(delay)
+        logger.info(f"Reminder task started for {reminder_id}, delay={delay}s")
+        try:
+            await asyncio.sleep(delay)
+        except asyncio.CancelledError:
+            logger.info(f"Reminder task cancelled for {reminder_id}")
+            return
+        except Exception as e:
+            logger.error(f"Error in reminder task sleep for {reminder_id}: {e}")
+            return
 
         # Check if reminder still exists
         reminder = self._find_reminder_by_id(reminder_id)
         if not reminder:
+            logger.warning(f"Reminder {reminder_id} not found after delay")
             return
+
+        logger.info(f"Reminder {reminder_id} triggered, sending to user {reminder.user_id}")
 
         # Mark as triggered
         reminder.last_triggered = datetime.now()
@@ -504,7 +523,11 @@ class ReminderManager:
         reminder.updated_at = datetime.now()
 
         # Send reminder message
-        await self._send_reminder_message(reminder)
+        try:
+            await self._send_reminder_message(reminder)
+            logger.info(f"Reminder {reminder_id} sent successfully to user {reminder.user_id}")
+        except Exception as e:
+            logger.error(f"Error sending reminder {reminder_id}: {e}")
 
         # Reschedule if recurring
         if reminder.is_recurring:
@@ -551,6 +574,10 @@ class ReminderManager:
         # Send via Telegram
         try:
             from telegram import Bot
+            logger.info(f"Attempting to send reminder to user {reminder.user_id}, bot_token present: {bool(self.config.bot_token)}")
+            if not self.config.bot_token:
+                logger.error(f"Bot token is empty for reminder {reminder.reminder_id}")
+                raise ValueError("Bot token is empty")
             bot = Bot(token=self.config.bot_token)
             await bot.send_message(
                 chat_id=reminder.user_id,

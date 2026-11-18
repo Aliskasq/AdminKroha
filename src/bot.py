@@ -1143,9 +1143,12 @@ class BinanceSquareBot:
             self.user_data[user_id]['pending_article']['cover_pending'] = True
 
             await query.edit_message_text(
-                f"🖼️ Добавление обложки к статье\n\n"
+                f"🖼️ **Добавление обложки к статье**\n\n"
                 f"📋 Заголовок: {title}\n\n"
-                f"Пришлите фото для обложки (максимум 1)."
+                f"⚠️ **Важно:** Пришлите фото для обложки **сразу после этого сообщения**.\n"
+                f"Telegram кнопки работают только несколько минут.\n\n"
+                f"Пришлите фото для обложки (максимум 1).\n\n"
+                f"Для отмены: /cancel",
             )
             logger.info(f"User {username} requested to add cover to article")
 
@@ -1155,7 +1158,6 @@ class BinanceSquareBot:
                 await query.edit_message_text("❌ Текст статьи пуст! Добавьте текст перед отправкой.")
                 return
 
-            # Set state to wait for time input with timezone
             schedule_type = self.user_data[user_id].get('run_article_schedule', 'today')
 
             if schedule_type == 'today':
@@ -1350,6 +1352,14 @@ class BinanceSquareBot:
             # Delete reminder
             reminder_id = callback_data.replace('run_reminder_delete_', '')
             await self._delete_reminder(query, user_id, reminder_id)
+
+        elif callback_data == 'run_list_reminders':
+            # Show reminders with delete buttons
+            await self._show_reminders(query, user_id)
+
+        elif callback_data == 'run_list_scheduled_articles':
+            # Show scheduled articles with delete buttons
+            await self._show_scheduled_articles(query, user_id)
 
         elif callback_data == 'run_list_scheduled':
             # Show scheduled posts with delete buttons
@@ -1638,24 +1648,51 @@ class BinanceSquareBot:
                 ]])
             )
         """
-        Publish the collected article to Binance Square.
-
-        Args:
-            user_id: Telegram user ID
-            chat_id: Telegram chat ID
-            bot: Bot instance for sending messages
+        Show scheduled articles with delete buttons.
         """
-        if user_id not in self.user_data or 'pending_article' not in self.user_data[user_id]:
+        posts = self.scheduler.get_scheduled_posts('scheduled')
+        article_posts = [p for p in posts if p.get('options', {}).get('type') == 'article']
+
+        if not article_posts:
+            await query.edit_message_text(
+                "📭 **Нет отложенных статей**\n\n"
+                "У вас нет запланированных статей.\n"
+                "Используйте /run → Статья сегодня/завтра для создания.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Назад в меню", callback_data='run_back')
+                ]])
+            )
             return
 
-        article = self.user_data[user_id]['pending_article']
-        title = article.get('title', '')
-        content = article.get('content', '')
-        cover_url = article.get('cover_url')
+        text = "📋 **Ваши отложенные статьи:**\n\n"
+        keyboard = []
 
-        if not content.strip():
-            await bot.send_message(chat_id=chat_id, text="❌ Текст статьи пуст!")
-            return
+        for post in article_posts[:10]:  # Limit to 10
+            tz_offset = post.get('timezone_offset', 0)
+            display_time = post['scheduled_time'] + timedelta(hours=tz_offset)
+            tz_str = f"UTC{tz_offset:+d}" if tz_offset else "UTC+0"
+
+            options = post.get('options', {})
+            title = options.get('title', 'Без заголовка')
+            cover = 'Да' if options.get('cover_url') else 'Нет'
+
+            preview = post['content'][:50] + "..." if len(post['content']) > 50 else post['content']
+            text += f"🆔 `{post['id']}`\n"
+            text += f"📋 {title}\n"
+            text += f"⏰ {display_time.strftime('%d.%m %H:%M')} ({tz_str})\n"
+            text += f"🖼️ Обложка: {cover}\n"
+            text += f"📝 {preview}\n\n"
+
+            keyboard.append([InlineKeyboardButton(
+                f"🗑 Удалить {post['id'][:12]}...",
+                callback_data=f'run_delete_{post["id"]}'
+            )])
+
+        keyboard.append([InlineKeyboardButton("🔙 Назад в меню", callback_data='run_back')])
+
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+
+    async def _delete_scheduled_post(self, query, user_id: int, post_id: str):
 
         username = self.user_data[user_id].get('username', 'Unknown')
 
@@ -3484,20 +3521,14 @@ class BinanceSquareBot:
                     # Add one day
                     scheduled_time += timedelta(days=1)
 
-                # Post to Binance with images
-                formatted_content = self.content_generator.generate_content(
+                # Schedule the photo post
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
                     text_content,
-                    post_type='image'
+                    user_id,
+                    options={'type': 'image', 'image_list': images[:2]},
+                    timezone_offset=self.config.timezone_offset
                 )
-
-                result = await self.binance_api.post_content(
-                    formatted_content,
-                    post_type='image',
-                    image_list=images[:2]
-                )
-
-                post_id = result.get('data', {}).get('id', 'N/A')
-                share_link = result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
 
                 tz_offset = self.config.timezone_offset
                 display_time = scheduled_time + timedelta(hours=tz_offset)
