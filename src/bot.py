@@ -1164,10 +1164,30 @@ class BinanceSquareBot:
             logger.info(f"User {username} started scheduled post creation via /run")
 
         elif callback_data == 'run_reminder':
-            # Start reminder creation (TG only)
-            self.user_data[user_id]['run_state'] = 'reminder_waiting_type'
+            # Start reminder creation (TG only) - ask for time selection
+            keyboard = [
+                [InlineKeyboardButton("📅 Сегодня", callback_data='run_reminder_today')],
+                [InlineKeyboardButton("📅 Завтра", callback_data='run_reminder_tomorrow')],
+                [InlineKeyboardButton("🔁 Ежедневно", callback_data='run_reminder_daily')],
+                [InlineKeyboardButton("🔙 Назад", callback_data='run_cancel')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             await query.edit_message_text(
                 f"🔔 **Создание напоминания (только в Telegram)**\n\n"
+                f"Выберите когда напоминать:\n\n"
+                f"📅 **Сегодня** — напоминание на сегодня\n"
+                f"📅 **Завтра** — напоминание на завтра\n"
+                f"🔁 **Ежедневно** — напоминание каждый день\n\n"
+                f"Для отмены: /cancel",
+                reply_markup=reply_markup
+            )
+            logger.info(f"User {username} started reminder creation via /run")
+
+        elif callback_data == 'run_reminder_today':
+            self.user_data[user_id]['run_state'] = 'reminder_waiting_type'
+            self.user_data[user_id]['run_reminder_schedule'] = 'today'
+            await query.edit_message_text(
+                f"🔔 **Напоминание — Сегодня**\n\n"
                 f"Выберите тип:\n"
                 f"• task — задача\n"
                 f"• market — рынок\n"
@@ -1178,7 +1198,53 @@ class BinanceSquareBot:
                 f"Для отмены: /cancel",
             )
             self.user_data[user_id]['run_reminder_step'] = 'type'
-            logger.info(f"User {username} started reminder creation via /run")
+            self.user_data[user_id]['run_reminder_schedule'] = 'today'
+            logger.info(f"User {username} started reminder creation (today) via /run")
+
+        elif callback_data == 'run_reminder_tomorrow':
+            self.user_data[user_id]['run_state'] = 'reminder_waiting_type'
+            self.user_data[user_id]['run_reminder_schedule'] = 'tomorrow'
+            await query.edit_message_text(
+                f"🔔 **Напоминание — Завтра**\n\n"
+                f"Выберите тип:\n"
+                f"• task — задача\n"
+                f"• market — рынок\n"
+                f"• analysis — анализ\n"
+                f"• news — новости\n\n"
+                f"Формат: `тип время [дни] сообщение`\n"
+                f"Пример: `market 14:30+1 BTC price 0,1,2,3,4`\n\n"
+                f"Для отмены: /cancel",
+            )
+            self.user_data[user_id]['run_reminder_step'] = 'type'
+            self.user_data[user_id]['run_reminder_schedule'] = 'tomorrow'
+            logger.info(f"User {username} started reminder creation (tomorrow) via /run")
+
+        elif callback_data == 'run_reminder_daily':
+            self.user_data[user_id]['run_state'] = 'reminder_waiting_type'
+            self.user_data[user_id]['run_reminder_schedule'] = 'daily'
+            await query.edit_message_text(
+                f"🔁 **Напоминание — Ежедневно**\n\n"
+                f"Выберите тип:\n"
+                f"• task — задача\n"
+                f"• market — рынок\n"
+                f"• analysis — анализ\n"
+                f"• news — новости\n\n"
+                f"Формат: `тип время [дни] сообщение`\n"
+                f"Пример: `market 14:30+1 BTC price 0,1,2,3,4`\n\n"
+                f"Для отмены: /cancel",
+            )
+            self.user_data[user_id]['run_reminder_step'] = 'type'
+            self.user_data[user_id]['run_reminder_schedule'] = 'daily'
+            logger.info(f"User {username} started reminder creation (daily) via /run")
+
+        elif callback_data == 'run_list_reminders':
+            # Show reminders with delete buttons
+            await self._show_reminders(query, user_id)
+
+        elif callback_data.startswith('run_reminder_delete_'):
+            # Delete reminder
+            reminder_id = callback_data.replace('run_reminder_delete_', '')
+            await self._delete_reminder(query, user_id, reminder_id)
 
         elif callback_data == 'run_list_scheduled':
             # Show scheduled posts with delete buttons
@@ -1384,7 +1450,86 @@ class BinanceSquareBot:
                 ]])
             )
 
-    async def _is_user_admin_in_group(self, user_id: int) -> bool:
+    async def _show_reminders(self, query, user_id: int):
+        """Show reminders with delete buttons."""
+        reminders = await self.reminder_manager.get_reminders(user_id)
+
+        if not reminders:
+            await query.edit_message_text(
+                "📭 **Напоминаний нет**\n\n"
+                "У вас нет активных напоминаний.\n"
+                "Используйте /run → Напоминание для создания.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Назад в меню", callback_data='run_back')
+                ]])
+            )
+            return
+
+        text = "⏰ **Ваши напоминания:**\n\n"
+        keyboard = []
+
+        for reminder in reminders:
+            days = reminder.get('days_of_week', [])
+            if days:
+                day_names = []
+                for day in days:
+                    days_list = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+                    day_names.append(days_list[day % 7])
+                days_display = ', '.join(day_names)
+            else:
+                days_display = 'Каждый день'
+
+            next_triggered = reminder.get('next_triggered')
+            if next_triggered:
+                try:
+                    next_time = datetime.fromisoformat(next_triggered)
+                    next_time_str = next_time.strftime('%d.%m %H:%M')
+                except:
+                    next_time_str = 'Скоро'
+            else:
+                next_time_str = 'Скоро'
+
+            text += (
+                f"📌 **{reminder['reminder_type'].title()}**\n"
+                f"   ⏰ Время: {reminder['time']} ({next_time_str})\n"
+                f"   📅 Дни: {days_display}\n"
+                f"   💬 Сообщение: {reminder['message']}\n"
+                f"   🆔 ID: {reminder['reminder_id']}\n\n"
+            )
+
+            keyboard.append([InlineKeyboardButton(
+                f"🗑 Удалить {reminder['reminder_id'][:12]}...",
+                callback_data=f'run_reminder_delete_{reminder["reminder_id"]}'
+            )])
+
+        keyboard.append([InlineKeyboardButton("🔙 Назад в меню", callback_data='run_back')])
+
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+
+    async def _delete_reminder(self, query, user_id: int, reminder_id: str):
+        """Delete a reminder."""
+        success = await self.reminder_manager.remove_reminder(reminder_id, user_id)
+
+        if success:
+            await query.edit_message_text(
+                f"✅ **Напоминание удалено!**\n\n"
+                f"🆔 ID: `{reminder_id}`\n\n"
+                f"Напоминание больше не сработает.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 К списку", callback_data='run_list_reminders'),
+                    InlineKeyboardButton("🏠 В меню", callback_data='run_back')
+                ]])
+            )
+            logger.info(f"User {user_id} deleted reminder {reminder_id}")
+        else:
+            await query.edit_message_text(
+                f"❌ **Напоминание не найдено**\n\n"
+                f"🆔 ID: `{reminder_id}`\n"
+                f"Проверьте ID и попробуйте снова.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 К списку", callback_data='run_list_reminders')
+                ]])
+            )
         """
         Publish the collected article to Binance Square.
 
@@ -2123,6 +2268,10 @@ class BinanceSquareBot:
                 InlineKeyboardButton("📰 Статья завтра", callback_data='run_article_tomorrow'),
             ],
             [
+                InlineKeyboardButton("📋 Отложенные статьи", callback_data='run_list_scheduled_articles'),
+                InlineKeyboardButton("⏰ Напоминания", callback_data='run_list_reminders'),
+            ],
+            [
                 InlineKeyboardButton("🔔 Напоминание", callback_data='run_reminder'),
                 InlineKeyboardButton("❌ Отмена", callback_data='run_cancel'),
             ],
@@ -2135,7 +2284,9 @@ class BinanceSquareBot:
             f"📝 **Текстовый пост** — сейчас или отложенный (сегодня/завтра + время)\n"
             f"🖼 **Пост с фото** — сейчас или отложенный (сегодня/завтра + время)\n"
             f"📰 **Статья сегодня** — заголовок → текст → обложка (опц.) → время\n"
-            f"📰 **Статья завтра** — заголовок → текст → обложка (опц.) → время\n\n"
+            f"📰 **Статья завтра** — заголовок → текст → обложка (опц.) → время\n"
+            f"📋 **Отложенные статьи** — просмотр и удаление\n"
+            f"⏰ **Напоминания** — управление напоминаниями\n\n"
             f"👤 Пользователь: {username}",
             reply_markup=reply_markup
         )
@@ -2152,6 +2303,10 @@ class BinanceSquareBot:
                 InlineKeyboardButton("📰 Статья завтра", callback_data='run_article_tomorrow'),
             ],
             [
+                InlineKeyboardButton("📋 Отложенные статьи", callback_data='run_list_scheduled_articles'),
+                InlineKeyboardButton("⏰ Напоминания", callback_data='run_list_reminders'),
+            ],
+            [
                 InlineKeyboardButton("🔔 Напоминание", callback_data='run_reminder'),
                 InlineKeyboardButton("❌ Отмена", callback_data='run_cancel'),
             ],
@@ -2164,7 +2319,9 @@ class BinanceSquareBot:
             f"📝 **Текстовый пост** — сейчас или отложенный (сегодня/завтра + время)\n"
             f"🖼 **Пост с фото** — сейчас или отложенный (сегодня/завтра + время)\n"
             f"📰 **Статья сегодня** — заголовок → текст → обложка (опц.) → время\n"
-            f"📰 **Статья завтра** — заголовок → текст → обложка (опц.) → время\n\n"
+            f"📰 **Статья завтра** — заголовок → текст → обложка (опц.) → время\n"
+            f"📋 **Отложенные статьи** — просмотр и удаление\n"
+            f"⏰ **Напоминания** — управление напоминаниями\n\n"
             f"👤 Пользователь: {username}",
             reply_markup=reply_markup
         )

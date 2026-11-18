@@ -515,7 +515,7 @@ class ReminderManager:
 
     async def _send_reminder_message(self, reminder: ReminderSchedule):
         """
-        Send reminder message to user.
+        Send reminder message to user via Telegram.
 
         Args:
             reminder: Reminder to send
@@ -548,9 +548,20 @@ class ReminderManager:
             f"📅 **Created:** {reminder.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n"
         )
 
-        # For now, we'll just log the reminder
-        # In a real implementation, this would send a message via Telegram
-        logger.info(f"Reminder for user {reminder.user_id}: {formatted_message}")
+        # Send via Telegram
+        try:
+            from telegram import Bot
+            bot = Bot(token=self.config.bot_token)
+            await bot.send_message(
+                chat_id=reminder.user_id,
+                text=formatted_message,
+                parse_mode='Markdown'
+            )
+            logger.info(f"Reminder sent to user {reminder.user_id}: {reminder.reminder_id}")
+        except Exception as e:
+            logger.error(f"Failed to send reminder to user {reminder.user_id}: {e}")
+            # Fallback to logging
+            logger.info(f"Reminder for user {reminder.user_id}: {formatted_message}")
 
     def _find_reminder(self, reminder_id: str, user_id: Optional[int] = None) -> Optional[ReminderSchedule]:
         """
