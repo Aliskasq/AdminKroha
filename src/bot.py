@@ -561,6 +561,9 @@ class BinanceSquareBot:
             return
 
         content = parts[1]  # Everything after the command, preserving newlines
+        # Ensure commands_used exists
+        if 'commands_used' not in self.user_data[user_id]:
+            self.user_data[user_id]['commands_used'] = 0
         self.user_data[user_id]['commands_used'] += 1
 
         try:
@@ -625,6 +628,9 @@ class BinanceSquareBot:
             return
 
         text_content = parts[1]  # Everything after the command, preserving newlines
+        # Ensure commands_used exists
+        if 'commands_used' not in self.user_data[user_id]:
+            self.user_data[user_id]['commands_used'] = 0
         self.user_data[user_id]['commands_used'] += 1
 
         # Store the content in user data for the next messages
@@ -946,6 +952,9 @@ class BinanceSquareBot:
             return
 
         title = parts[1].strip()
+        # Ensure commands_used exists
+        if 'commands_used' not in self.user_data[user_id]:
+            self.user_data[user_id]['commands_used'] = 0
         self.user_data[user_id]['commands_used'] += 1
 
         # Store article data
