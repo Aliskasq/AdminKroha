@@ -689,6 +689,12 @@ class BinanceSquareBot:
             self.user_data[user_id]['pending_images'] = []
             self.user_data[user_id]['run_state'] = 'post_photo_waiting_photo'
 
+        # Support scheduled photo post flow - photo upload after text provided
+        run_state = self.user_data.get(user_id, {}).get('run_state')
+        if not is_article_cover and run_state == 'post_photo_scheduled_waiting_photo':
+            # User is uploading photo for scheduled post
+            pass  # Will be handled below
+
         # Check if user has pending image post
         if not is_article_cover and (user_id not in self.user_data or 'pending_image_post' not in self.user_data[user_id]):
             await update.message.reply_text(
@@ -753,8 +759,12 @@ class BinanceSquareBot:
                 )
                 logger.info(f"User {username} added cover to article: {title}")
             else:
+                # Check if this is a scheduled photo post
+                run_state = self.user_data.get(user_id, {}).get('run_state')
+                is_scheduled_photo = run_state in ('post_photo_scheduled_waiting_photo', 'post_photo_scheduled_active')
+
                 # Regular post image handling
-                text_content = self.user_data[user_id]['pending_image_post']
+                text_content = self.user_data[user_id].get('pending_image_post', '')
 
                 # Check if we already have 2 images
                 current_images = self.user_data[user_id].get('pending_images', [])
@@ -817,6 +827,11 @@ class BinanceSquareBot:
         # Get username for logging
         username = self.user_data[user_id].get('username', 'Unknown')
 
+        # Check if this is a scheduled photo post
+        run_state = self.user_data[user_id].get('run_state')
+        is_scheduled = run_state in ('post_photo_scheduled_active', 'post_photo_scheduled_waiting_photo')
+        schedule_type = self.user_data[user_id].get('run_post_schedule', 'now')
+
         try:
             # Prepare content with image list
             formatted_content = self.content_generator.generate_content(
@@ -824,33 +839,80 @@ class BinanceSquareBot:
                 post_type='image'
             )
 
-            # Post to Binance Square with all images
-            post_result = await self.binance_api.post_content(
-                formatted_content,
-                post_type='image',
-                image_list=images[:2]  # Max 2 images
-            )
+            if is_scheduled:
+                # Schedule the post
+                schedule_type = self.user_data[user_id].get('run_post_schedule', 'today')
 
-            # Clear pending state
-            self.user_data[user_id].pop('pending_image_post', None)
-            self.user_data[user_id].pop('pending_images', None)
+                if schedule_type == 'today':
+                    # Schedule for today at specified time
+                    scheduled_time = self.user_data[user_id].pop('scheduled_time', None)
+                    if not scheduled_time:
+                        # Fallback to now if no scheduled time
+                        scheduled_time = datetime.now() + timedelta(minutes=1)
+                else:  # tomorrow
+                    scheduled_time = self.user_data[user_id].pop('scheduled_time', None)
+                    if not scheduled_time:
+                        scheduled_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
-            # Extract post ID and link
-            post_id = post_result.get('data', {}).get('id', 'N/A')
-            share_link = post_result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
+                    text_content,
+                    user_id,
+                    options={'type': 'image', 'image_list': images[:2]},
+                    timezone_offset=self.config.timezone_offset
+                )
 
-            success_message = (
-                f"✅ Пост с {len(images)} изображением(ями) опубликован! 🎉\n\n"
-                f"📝 Текст: {text_content}\n"
-                f"🖼️ Изображений: {len(images)}\n\n"
-                f"🆔 Post ID: {post_id}\n"
-                f"🔗 Ссылка на пост: {share_link}"
-            )
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
 
-            # Send success message to the chat
-            await bot.send_message(chat_id=chat_id, text=success_message)
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text=(
+                        f"✅ **Отложенный пост с фото создан!** 🎉\n\n"
+                        f"📝 Контент: {text_content[:100]}{'...' if len(text_content) > 100 else ''}\n"
+                        f"🖼️ Изображений: {len(images)}\n"
+                        f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                        f"🆔 ID: {post_id}\n\n"
+                        f"Пост опубликуется автоматически."
+                    )
+                )
+            else:
+                # Post to Binance Square immediately with all images
+                post_result = await self.binance_api.post_content(
+                    formatted_content,
+                    post_type='image',
+                    image_list=images[:2]  # Max 2 images
+                )
+
+                # Clear pending state
+                self.user_data[user_id].pop('pending_image_post', None)
+                self.user_data[user_id].pop('pending_images', None)
+
+                # Extract post ID and link
+                post_id = post_result.get('data', {}).get('id', 'N/A')
+                share_link = post_result.get('data', {}).get('shareLink', f'https://www.binance.com/square/post/{post_id}')
+
+                success_message = (
+                    f"✅ Пост с {len(images)} изображением(ями) опубликован! 🎉\n\n"
+                    f"📝 Текст: {text_content}\n"
+                    f"🖼️ Изображений: {len(images)}\n\n"
+                    f"🆔 Post ID: {post_id}\n"
+                    f"🔗 Ссылка на пост: {share_link}"
+                )
+
+                # Send success message to the chat
+                await bot.send_message(chat_id=chat_id, text=success_message)
 
             logger.info(f"User {username} posted image content to Binance Square: {text_content[:50]}...")
+
+        except Exception as e:
+            error_message = f"❌ Ошибка публикации: {str(e)}\n"
+            await bot.send_message(chat_id=chat_id, text=error_message)
+            logger.error(f"Error posting image content for user {username}: {e}")
+
+            # Clean up on error
+            self.user_data[user_id].pop('pending_image_post', None)
+            self.user_data[user_id].pop('pending_images', None)
 
         except Exception as e:
             error_message = f"❌ Ошибка публикации: {str(e)}\n"
@@ -911,14 +973,57 @@ class BinanceSquareBot:
                 await query.edit_message_text("❌ Нет изображений для отправки!")
                 return
 
-            # Publish the post
-            await query.edit_message_text("⏳ Публикую пост...")
-            try:
+            # Check if this is a scheduled post
+            run_state = self.user_data[user_id].get('run_state')
+            is_scheduled = run_state in ('post_photo_scheduled_active', 'post_photo_scheduled_waiting_photo')
+
+            if is_scheduled:
+                # Schedule the post
+                schedule_type = self.user_data[user_id].get('run_post_schedule', 'today')
+                text_content = self.user_data[user_id].get('pending_image_post', '')
+
+                if schedule_type == 'today':
+                    # Schedule for today at specified time
+                    scheduled_time = self.user_data[user_id].pop('scheduled_time', None)
+                    if not scheduled_time:
+                        # Fallback to now if no scheduled time
+                        scheduled_time = datetime.now() + timedelta(minutes=1)
+                else:  # tomorrow
+                    scheduled_time = self.user_data[user_id].pop('scheduled_time', None)
+                    if not scheduled_time:
+                        scheduled_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+
+                # Schedule the post
+                post_id = await self.scheduler.schedule_post(
+                    scheduled_time,
+                    text_content,
+                    user_id,
+                    options={'type': 'image', 'image_list': images[:2]},
+                    timezone_offset=self.config.timezone_offset
+                )
+
+                tz_offset = self.config.timezone_offset
+                display_time = scheduled_time + timedelta(hours=tz_offset)
+
+                await query.edit_message_text(
+                    f"✅ **Отложенный пост с фото создан!** 🎉\n\n"
+                    f"📝 Контент: {text_content[:100]}{'...' if len(text_content) > 100 else ''}\n"
+                    f"🖼️ Изображений: {len(images)}\n"
+                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
+                    f"🆔 ID: {post_id}\n\n"
+                    f"Пост опубликуется автоматически."
+                )
+
+                self.user_data[user_id].pop('pending_image_post', None)
+                self.user_data[user_id].pop('pending_images', None)
+                self.user_data[user_id].pop('run_state', None)
+                self.user_data[user_id].pop('run_post_schedule', None)
+                logger.info(f"User {username} scheduled photo post via /run: {post_id}")
+            else:
+                # Publish the post immediately
+                await query.edit_message_text("⏳ Публикую пост...")
                 await self._publish_image_post(user_id, query.message.chat.id, context.bot)
                 logger.info(f"User {username} confirmed and sent image post")
-            except Exception as e:
-                logger.error(f"Error publishing image post: {e}")
-                await query.edit_message_text(f"❌ Ошибка публикации: {str(e)}")
 
     async def article_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -1294,8 +1399,9 @@ class BinanceSquareBot:
             self.user_data[user_id]['run_post_schedule'] = 'today'
             await query.edit_message_text(
                 f"📝 **Текстовый пост — Сегодня**\n\n"
-                f"Укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n\n"
+                f"⏰ **Шаг 1/2: Укажите время публикации**\n\n"
                 f"Примеры: `15:30`, `15:30+0`, `15:31+1`, `16:20+2`, `01:20+3`\n\n"
+                f"💡 Формат: `ЧЧ:ММ` или `ЧЧ:ММ+X` где X = 0,1,2,3 (пояс UTC)\n\n"
                 f"Для отмены: /cancel",
             )
             logger.info(f"User {username} chose text post (today) via /run")
@@ -1305,8 +1411,9 @@ class BinanceSquareBot:
             self.user_data[user_id]['run_post_schedule'] = 'tomorrow'
             await query.edit_message_text(
                 f"📝 **Текстовый пост — Завтра**\n\n"
-                f"Укажите время публикации (ЧЧ:ММ или ЧЧ:ММ+X):\n\n"
+                f"⏰ **Шаг 1/2: Укажите время публикации**\n\n"
                 f"Примеры: `15:30`, `15:30+0`, `15:31+1`, `16:20+2`, `01:20+3`\n\n"
+                f"💡 Формат: `ЧЧ:ММ` или `ЧЧ:ММ+X` где X = 0,1,2,3 (пояс UTC)\n\n"
                 f"Для отмены: /cancel",
             )
             logger.info(f"User {username} started text post (tomorrow) via /run")
@@ -2938,7 +3045,7 @@ class BinanceSquareBot:
                     )
 
             elif run_state == 'post_text_scheduled_waiting_time':
-                # Parse time and schedule text post
+                # Parse time and store it, then ask for content
                 time_str = text.strip()
                 scheduled_time = self._parse_time(time_str)
                 if not scheduled_time:
@@ -2949,39 +3056,21 @@ class BinanceSquareBot:
                     )
                     return
 
-                content = text
-                schedule_type = self.user_data[user_id].pop('run_post_schedule', 'today')
-
-                if schedule_type == 'today':
-                    # Schedule for today at specified time
-                    pass  # _parse_time already handles the time
-                else:  # tomorrow
-                    # Add one day
-                    scheduled_time += timedelta(days=1)
-
-                post_id = await self.scheduler.schedule_post(
-                    scheduled_time,
-                    content,
-                    user_id,
-                    timezone_offset=self.config.timezone_offset
-                )
-
-                tz_offset = self.config.timezone_offset
-                display_time = scheduled_time + timedelta(hours=tz_offset)
+                # Store the scheduled time and ask for content
+                self.user_data[user_id]['scheduled_time'] = scheduled_time
+                self.user_data[user_id]['run_state'] = 'post_text_scheduled_waiting_content'
+                self.user_data[user_id].pop('run_post_schedule', None)
 
                 await update.message.reply_text(
-                    f"✅ **Отложенный текстовый пост создан!** 🎉\n\n"
-                    f"📝 Контент: {content[:100]}{'...' if len(content) > 100 else ''}\n"
-                    f"⏰ Время: {display_time.strftime('%d.%m %H:%M')} (UTC{tz_offset:+d})\n"
-                    f"🆔 ID: {post_id}\n\n"
-                    f"Пост опубликуется автоматически."
+                    f"✅ Время принято: {text.strip()}\n\n"
+                    f"📝 **Шаг 2/2: Пришлите текст поста**\n\n"
+                    f"Поддерживается Markdown, хештеги #, тикеры $.\n\n"
+                    f"Максимум 1100 символов.\n\n"
+                    f"Для отмены: /cancel",
                 )
-                self.user_data[user_id].pop('run_state', None)
-                self.user_data[user_id].pop('run_post_schedule', None)
-                logger.info(f"User scheduled text post via /run: {post_id}")
 
             elif run_state == 'post_photo_scheduled_waiting_time':
-                # Parse time and schedule photo post
+                # Parse time and ask for text content
                 time_str = text.strip()
                 scheduled_time = self._parse_time(time_str)
                 if not scheduled_time:
@@ -2992,25 +3081,17 @@ class BinanceSquareBot:
                     )
                     return
 
-                text_content = self.user_data[user_id].pop('pending_image_post', '')
-                images = self.user_data[user_id].pop('pending_images', [])
-                schedule_type = self.user_data[user_id].pop('run_post_schedule', 'today')
+                # Store the scheduled time and ask for text content
+                self.user_data[user_id]['scheduled_time'] = scheduled_time
+                self.user_data[user_id]['run_state'] = 'post_photo_scheduled_waiting_text'
+                self.user_data[user_id].pop('run_post_schedule', None)
 
-                if schedule_type == 'today':
-                    pass  # _parse_time already handles the time
-                else:  # tomorrow
-                    scheduled_time += timedelta(days=1)
-
-                # Post to Binance with images
-                formatted_content = self.content_generator.generate_content(
-                    text_content,
-                    post_type='image'
-                )
-
-                result = await self.binance_api.post_content(
-                    formatted_content,
-                    post_type='image',
-                    image_list=images[:2]
+                await update.message.reply_text(
+                    f"✅ Время принято: {text.strip()}\n\n"
+                    f"📝 **Шаг 2/3: Пришлите текст поста**\n\n"
+                    f"Поддерживается Markdown, хештеги #, тикеры $.\n\n"
+                    f"Максимум 1100 символов.\n\n"
+                    f"Для отмены: /cancel",
                 )
 
                 post_id = result.get('data', {}).get('id', 'N/A')
@@ -3031,6 +3112,23 @@ class BinanceSquareBot:
                 self.user_data[user_id].pop('run_state', None)
                 self.user_data[user_id].pop('run_post_schedule', None)
                 logger.info(f"User scheduled photo post via /run: {post_id}")
+
+            elif run_state == 'post_photo_scheduled_waiting_text':
+                # Store text content and ask for photo
+                text_content = text
+                self.user_data[user_id]['pending_image_post'] = text_content
+                self.user_data[user_id]['pending_images'] = []
+                self.user_data[user_id]['run_state'] = 'post_photo_scheduled_waiting_photo'
+
+                keyboard = [[InlineKeyboardButton("❌ Отмена", callback_data='img_cancel')]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await update.message.reply_text(
+                    f"📝 Текст принят.\n\n"
+                    f"Теперь пришлите 1-2 фото для поста.",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+                self.user_data[user_id]['run_state'] = 'post_photo_scheduled_active'
 
             elif run_state == 'article_waiting_title':
 
