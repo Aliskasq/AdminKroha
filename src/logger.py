@@ -13,14 +13,6 @@ from datetime import datetime
 import os
 import json
 
-# Configure root logger
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG)
-
-# Configure root logger
-root_logger = logging.getLogger()
-logger = logging.getLogger(__name__)
-
 
 # Create console handler with debug level
 console_handler = logging.StreamHandler(sys.stdout)
@@ -44,7 +36,9 @@ formatter = logging.Formatter(
 console_handler.setFormatter(formatter)
 file_handler.setFormatter(formatter)
 
-# Add handlers to root logger
+# Configure root logger ONCE with both handlers
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
 root_logger.addHandler(console_handler)
 root_logger.addHandler(file_handler)
 
@@ -56,13 +50,14 @@ logging.getLogger('telegram.ext').setLevel(logging.WARNING)
 logging.getLogger('httpx').setLevel(logging.WARNING)
 logging.getLogger('httpcore').setLevel(logging.WARNING)
 
-# Create bot-specific logger
+# Create bot-specific logger (will propagate to root)
 bot_logger = logging.getLogger('telegram-binance-bot')
 
 
 def setup_logger(name: str, level: str = "INFO") -> logging.Logger:
     """
     Setup a logger with the given name and level.
+    Does NOT add handlers - uses root logger handlers via propagation.
 
     Args:
         name: Logger name
@@ -85,10 +80,8 @@ def setup_logger(name: str, level: str = "INFO") -> logging.Logger:
     log_level = level_map.get(level.upper(), logging.INFO)
     logger.setLevel(log_level)
 
-    # Only add handlers if not already added
-    if not logger.handlers:
-        logger.addHandler(console_handler)
-        logger.addHandler(file_handler)
+    # Do NOT add handlers - rely on root logger propagation
+    # This prevents duplicate log entries
 
     return logger
 
@@ -150,6 +143,7 @@ class LogManager:
     def setup_module_logger(self, module_name: str, level: str = "INFO") -> logging.Logger:
         """
         Setup logger for a specific module.
+        Does NOT add handlers - uses root logger handlers via propagation.
 
         Args:
             module_name: Name of the module
@@ -161,15 +155,14 @@ class LogManager:
         logger = logging.getLogger(f"telegram-binance-bot.{module_name}")
         logger.setLevel(getattr(logging, level.upper()))
 
-        # Add handlers if not already present
-        if not logger.handlers:
-            logger.addHandler(self.create_console_handler(level))
-            logger.addHandler(self.create_rotating_handler(level))
+        # Do NOT add handlers - rely on root logger propagation
+        # This prevents duplicate log entries
 
         return logger
 
     def log_bot_start(self):
         """Log bot start information."""
+        logger = logging.getLogger(__name__)
         logger.info("=" * 50)
         logger.info("Telegram Binance Bot Starting")
         logger.info(f"Version: 1.0.0")
@@ -180,6 +173,7 @@ class LogManager:
 
     def log_bot_shutdown(self):
         """Log bot shutdown information."""
+        logger = logging.getLogger(__name__)
         logger.info("=" * 50)
         logger.info("Telegram Binance Bot Shutting Down")
         logger.info(f"Shutdown at: {datetime.now().isoformat()}")
@@ -205,6 +199,7 @@ class LogManager:
             duration: Request duration in seconds
             user_id: User ID (optional)
         """
+        logger = logging.getLogger(__name__)
         user_info = f" (User: {user_id})" if user_id else ""
 
         log_message = (
@@ -232,6 +227,7 @@ class LogManager:
             context: Additional context information
             user_id: User ID (optional)
         """
+        logger = logging.getLogger(__name__)
         error_info = {
             'error_type': type(error).__name__,
             'error_message': str(error),
@@ -266,5 +262,6 @@ class LogManager:
             return stats
 
         except Exception as e:
+            logger = logging.getLogger(__name__)
             logger.error(f"Failed to get log stats: {e}")
             return {'error': str(e)}

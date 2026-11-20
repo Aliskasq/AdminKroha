@@ -85,7 +85,7 @@ class PostScheduler:
             List of published post IDs
         """
         published_posts = []
-        current_time = datetime.now()
+        current_time = datetime.utcnow()  # Compare UTC with UTC
 
         for post in self.scheduled_posts[:]:
             if post['status'] == 'scheduled' and post['scheduled_time'] <= current_time:
@@ -96,7 +96,7 @@ class PostScheduler:
 
                     # Update post status
                     post['status'] = 'published'
-                    post['published_at'] = current_time
+                    post['published_at'] = current_time  # UTC
 
                 except Exception as e:
                     logger.error(f"Failed to publish scheduled post {post['id']}: {e}")
@@ -135,6 +135,10 @@ class PostScheduler:
             if options.get('cover_url'):
                 binance_options['image_url'] = options['cover_url']
 
+        # Handle image_list for scheduled photo posts
+        if post_type == 'image' and options.get('image_list'):
+            binance_options['image_list'] = options['image_list']
+
         # Post to Binance
         result = await self.binance_api.post_content(
             content,
@@ -142,7 +146,7 @@ class PostScheduler:
             **binance_options
         )
 
-        # Add image if specified (for non-article posts)
+        # Add image if specified (for non-article posts, legacy image_url)
         if options.get('image_url') and post_type != 'article':
             image_result = await self.binance_api.upload_image(
                 open(options['image_url'], 'rb').read()
@@ -170,6 +174,35 @@ class PostScheduler:
 
         return 'text'
 
+
+    async def update_scheduled_post(self, post_id: str, content: str = None, scheduled_time: datetime = None, options: dict = None) -> bool:
+        """
+        Update a scheduled post.
+        
+        Args:
+            post_id: Post ID to update
+            content: New content (optional)
+            scheduled_time: New scheduled time (optional)
+            options: New options (optional)
+            
+        Returns:
+            True if updated, False if not found
+        """
+        for post in self.scheduled_posts:
+            if post['id'] == post_id:
+                if content is not None:
+                    post['content'] = content
+                if scheduled_time is not None:
+                    post['scheduled_time'] = scheduled_time
+                if options is not None:
+                    post['options'] = options
+                await self._save_scheduled_posts()
+                logger.info(f"Updated scheduled post: {post_id}")
+                return True
+        logger.warning(f"Post not found for update: {post_id}")
+        return False
+
+
     async def _save_scheduled_posts(self):
         """Save scheduled posts to file."""
         try:
@@ -186,9 +219,15 @@ class PostScheduler:
                     serialized_post['timezone_offset'] = 0
                 serialized_posts.append(serialized_post)
 
-            # Save to file
-            with open('scheduled_posts.json', 'w') as f:
+            # Save to file atomically with fsync
+            import tempfile
+            import os
+            tmp_path = 'scheduled_posts.json.tmp'
+            with open(tmp_path, 'w') as f:
                 json.dump(serialized_posts, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, 'scheduled_posts.json')
 
         except Exception as e:
             logger.error(f"Failed to save scheduled posts: {e}")

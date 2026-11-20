@@ -159,3 +159,13 @@ desktop.ini
 .vscode
 .ideavenv_production/
 venv_production/
+
+# Данные пользователей / состояние
+reminders.json
+scheduled_posts.json
+
+# Временные файлы фиксов
+fix.patch
+fix_bot.py
+fix_reminder.py
+src/bot.py.backup

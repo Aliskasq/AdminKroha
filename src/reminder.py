@@ -10,6 +10,7 @@ import logging
 from typing import Dict, List, Optional, Any, Set
 from datetime import datetime, timedelta
 import json
+import os
 import re
 from enum import Enum
 
@@ -186,14 +187,16 @@ class ReminderSchedule:
 class ReminderManager:
     """Manages user reminders with customizable schedules."""
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, bot=None):
         """
         Initialize reminder manager.
 
         Args:
             config: Bot configuration
+            bot: Bot instance for sending messages (optional)
         """
         self.config = config
+        self.bot = bot
         self.reminders: Dict[int, List[ReminderSchedule]] = {}  # user_id -> list of reminders
         self.active_timers: Dict[str, asyncio.Task] = {}
         self.default_reminder_types = {
@@ -640,7 +643,7 @@ class ReminderManager:
         return days[day_index % 7]
 
     async def _save_reminders(self):
-        """Save reminders to file."""
+        """Save reminders to file atomically with fsync."""
         try:
             all_reminders = []
             for user_id, user_reminders in self.reminders.items():
@@ -649,8 +652,15 @@ class ReminderManager:
                     reminder_dict['user_id'] = user_id
                     all_reminders.append(reminder_dict)
 
-            with open('reminders.json', 'w') as f:
+            # Save atomically with fsync
+            import tempfile
+            import os
+            tmp_path = 'reminders.json.tmp'
+            with open(tmp_path, 'w') as f:
                 json.dump(all_reminders, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, 'reminders.json')
 
         except Exception as e:
             logger.error(f"Failed to save reminders: {e}")
@@ -660,14 +670,20 @@ class ReminderManager:
         try:
             if os.path.exists('reminders.json'):
                 with open('reminders.json', 'r') as f:
-                    all_reminders = json.load(f)
+                    content = f.read()
+                    logger.debug(f"Reminders file content: {content[:200]}")
+                    all_reminders = json.loads(content)
+                    logger.debug(f"Parsed reminders: {all_reminders}")
 
                 # Clear existing reminders
                 self.reminders.clear()
 
                 # Load reminders
                 for reminder_dict in all_reminders:
-                    user_id = reminder_dict.pop('user_id')
+                    logger.debug(f"Processing reminder dict keys: {list(reminder_dict.keys())}")
+                    # Don't pop user_id - from_dict expects it in the dict
+                    user_id = reminder_dict.get('user_id')
+                    logger.debug(f"Got user_id: {user_id}")
                     reminder = ReminderSchedule.from_dict(reminder_dict)
 
                     if user_id not in self.reminders:
@@ -682,3 +698,5 @@ class ReminderManager:
 
         except Exception as e:
             logger.error(f"Failed to load reminders: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
